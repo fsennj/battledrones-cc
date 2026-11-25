@@ -1,0 +1,141 @@
+From 608b65929f9a125cba04130aeae8bbf9021ec004 Mon Sep 17 00:00:00 2001
+From: Franz Senn <61477285+fsennj@users.noreply.github.com>
+Date: Wed, 25 Nov 2026 00:51:46 +0000
+Subject: [PATCH 6/6] =?UTF-8?q?look:=20gr=C3=BCne=20Mehrfachauswahl=20mit?=
+ =?UTF-8?q?=20Eckenklammern=20(Rahmen=20um=20die=20Auswahl=20+=20Marquee-E?=
+ =?UTF-8?q?cken)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ src/game/GameScene.ts          | 56 ++++++++++++++++++++++++++++++++++
+ src/game/three/terrain-glsl.ts |  3 ++
+ src/ui/style.css               | 14 ++++++++-
+ 3 files changed, 72 insertions(+), 1 deletion(-)
+
+diff --git a/src/game/GameScene.ts b/src/game/GameScene.ts
+index bbe2bfd..879f289 100644
+--- a/src/game/GameScene.ts
++++ b/src/game/GameScene.ts
+@@ -1497,6 +1497,32 @@ export class GameScene {
+       ctx.strokeStyle = "#3a2a00";
+       ctx.stroke();
+     }
++    // RA-look: a multi-unit selection gets a green corner-bracket frame around all of
++    // it (a lone unit keeps just its own ring). Own side only: the green stays ours.
++    if (this.ctrl.selectedUnits.size > 1) {
++      let x0 = Infinity;
++      let y0 = Infinity;
++      let x1 = -Infinity;
++      let y1 = -Infinity;
++      let n = 0;
++      for (const id of this.ctrl.selectedUnits) {
++        const u = w.units.get(id);
++        if (!u || u.faction !== PLAYER || !this.entities.isShown(id)) continue;
++        const p = this.entities.pos(id);
++        if (!p) continue;
++        const s = rig.project(p.x, p.y, p.top * 0.5);
++        if (s.behind) continue;
++        x0 = Math.min(x0, s.x);
++        y0 = Math.min(y0, s.y);
++        x1 = Math.max(x1, s.x);
++        y1 = Math.max(y1, s.y);
++        n++;
++      }
++      if (n > 1) {
++        const pad = 18;
++        bracketBox(ctx, x0 - pad, y0 - pad, x1 - x0 + pad * 2, y1 - y0 + pad * 2);
++      }
++    }
+     if (this.boxRect) {
+       const b = this.boxRect;
+       // edges through device pixel centres: the strokes sit on the pixel grid instead of straddling it
+@@ -1506,6 +1532,7 @@ export class GameScene {
+       const bh = pxCentre(Math.max(b.y0, b.y1), dpr) - y;
+       ctx.fillStyle = "rgba(126,242,155,0.08)";
+       ctx.fillRect(x, y, bw, bh);
++      bracketBox(ctx, x, y, bw, bh);
+       // marching green dashes, each with a 1 px dark rim (a dash 1 px longer at both ends): the edge
+       // reads on snow, and on sand the gaps stay sand instead of making a dark frame
+       const march = (performance.now() / 40) % 10;
+@@ -1857,6 +1884,35 @@ function pxCentre(v: number, dpr: number): number {
+   return (Math.floor(v * dpr) + 0.5) / dpr;
+ }
+ 
++/** RA-style corner brackets: short solid Ls at the four corners of a screen-space box. */
++function bracketBox(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
++  const arm = Math.max(6, Math.min(13, Math.min(w, h) / 3));
++  ctx.save();
++  ctx.lineCap = "square";
++  ctx.lineJoin = "miter";
++  for (const [cx, cy, sx, sy] of [
++    [x, y, 1, 1],
++    [x + w, y, -1, 1],
++    [x, y + h, 1, -1],
++    [x + w, y + h, -1, -1],
++  ] as const) {
++    // dark rim first, then our own selection green on top (reads on snow and on sand alike)
++    for (const [lw, col] of [
++      [4.5, "rgba(4,7,12,0.6)"],
++      [2.5, "rgba(126,242,155,0.95)"],
++    ] as const) {
++      ctx.lineWidth = lw;
++      ctx.strokeStyle = col;
++      ctx.beginPath();
++      ctx.moveTo(cx + sx * arm, cy);
++      ctx.lineTo(cx, cy);
++      ctx.lineTo(cx, cy + sy * arm);
++      ctx.stroke();
++    }
++  }
++  ctx.restore();
++}
++
+ /** Add a rank chevron centred on (x, y), scaled by k, to the current path (drawn gold by drawScreen). */
+ function chevron(ctx: CanvasRenderingContext2D, x: number, y: number, k: number): void {
+   ctx.moveTo(x - 9 * k, y - 2 * k);
+diff --git a/src/game/three/terrain-glsl.ts b/src/game/three/terrain-glsl.ts
+index 62e61f8..106ce86 100644
+--- a/src/game/three/terrain-glsl.ts
++++ b/src/game/three/terrain-glsl.ts
+@@ -191,6 +191,9 @@ export function patchGround(s: Shader, u: GroundUniforms, rock: RockUniforms | n
+         vec3 soft = texture2D( map, vMapUv, blur + 1.5 ).rgb;
+         float sharp = mix( uDetail.z, -0.5, smoothstep( 0.35, 0.8, vFowW.y ) ) * ( 1.0 - smoothstep( 0.0, 1.0, od ) );
+         diffuseColor.rgb = max( diffuseColor.rgb + ( diffuseColor.rgb - soft ) * sharp, 0.0 );
++        // RA-look: the baked paint is muted toward olive steel (its green turf glowed too much)
++        float ol = dot( diffuseColor.rgb, vec3( 0.30, 0.50, 0.20 ) );
++        diffuseColor.rgb = mix( diffuseColor.rgb, vec3( ol * 0.78, ol * 0.86, ol * 0.60 ), 0.45 );
+       }
+       #endif`
+     )
+diff --git a/src/ui/style.css b/src/ui/style.css
+index 652508e..14d9891 100644
+--- a/src/ui/style.css
++++ b/src/ui/style.css
+@@ -5911,9 +5911,21 @@ button {
+     top: max(6px, env(safe-area-inset-top));
+     z-index: 6;
+   }
+-  /* no emoji font in some runtimes: the tabs carry their text labels here too */
++  /* no emoji font in some runtimes: the tabs carry their text labels here too.
++     2x2: four labels do not fit one row inside a 208 px column. */
++  .tabs {
++    display: grid;
++    grid-template-columns: 1fr 1fr;
++  }
++  .tab {
++    min-width: 0;
++    overflow: hidden;
++    letter-spacing: 0.3px;
++  }
+   .tab .tl2 {
+     display: inline;
++    overflow: hidden;
++    text-overflow: ellipsis;
+   }
+   .tab {
+     font-size: 12px;
+-- 
+2.53.0
+

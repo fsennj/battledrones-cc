@@ -1,0 +1,205 @@
+From 563fa094d84c7ecfd20668f1b2266d3649c5f098 Mon Sep 17 00:00:00 2001
+From: Franz Senn <61477285+fsennj@users.noreply.github.com>
+Date: Wed, 25 Nov 2026 00:46:16 +0000
+Subject: [PATCH 5/6] =?UTF-8?q?look:=20C&C-Chrom=20=E2=80=94=20Sidebar=20g?=
+ =?UTF-8?q?ebuerstetes=20Metall=20auf=20Schiefer,=20Radar=20mit=20Rahmen?=
+ =?UTF-8?q?=20oben,=20Reiter=20mit=20Textlabels,=20Zaehler=20als=20Instrum?=
+ =?UTF-8?q?entenfenster;=20Schrift=20@fontsource/rajdhani=205.3.0=20(OFL-1?=
+ =?UTF-8?q?.1)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ package-lock.json |  10 ++++
+ package.json      |   1 +
+ src/ui/style.css  | 132 ++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 143 insertions(+)
+
+diff --git a/package-lock.json b/package-lock.json
+index 800a4a2..1cf176a 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -8,6 +8,7 @@
+       "name": "battledrones",
+       "version": "0.2.0",
+       "dependencies": {
++        "@fontsource/rajdhani": "^5.3.0",
+         "qrcode-generator": "^2.0.4",
+         "three": "^0.185.1"
+       },
+@@ -2029,6 +2030,15 @@
+         "node": ">=18"
+       }
+     },
++    "node_modules/@fontsource/rajdhani": {
++      "version": "5.3.0",
++      "resolved": "https://registry.npmjs.org/@fontsource/rajdhani/-/rajdhani-5.3.0.tgz",
++      "integrity": "sha512-oBJgSIibWJvVBKseme1JczqPLoDHN97LHti4uh0LjfcJqQoVmnQQlRKIpEjTJV559rmVQ6qbVZZwKwk2wkBTtw==",
++      "license": "OFL-1.1",
++      "funding": {
++        "url": "https://github.com/sponsors/ayuhito"
++      }
++    },
+     "node_modules/@isaacs/cliui": {
+       "version": "9.0.0",
+       "resolved": "https://registry.npmjs.org/@isaacs/cliui/-/cliui-9.0.0.tgz",
+diff --git a/package.json b/package.json
+index 3bf43d4..544bdb8 100644
+--- a/package.json
++++ b/package.json
+@@ -21,6 +21,7 @@
+     "art:textures": "python3 art/textures.py"
+   },
+   "dependencies": {
++    "@fontsource/rajdhani": "^5.3.0",
+     "qrcode-generator": "^2.0.4",
+     "three": "^0.185.1"
+   },
+diff --git a/src/ui/style.css b/src/ui/style.css
+index fe4da51..652508e 100644
+--- a/src/ui/style.css
++++ b/src/ui/style.css
+@@ -1,3 +1,12 @@
++/* Look pass (RA2): self-hosted condensed grotesque, @fontsource/rajdhani 5.3.0,
++   licence OFL-1.1 (node_modules/@fontsource/rajdhani/LICENSE.md). The CSS already
++   asked for "Rajdhani" (body rule below); before this file it never loaded, so the
++   game rendered in the system fallback. */
++@import "@fontsource/rajdhani/latin-400.css";
++@import "@fontsource/rajdhani/latin-500.css";
++@import "@fontsource/rajdhani/latin-600.css";
++@import "@fontsource/rajdhani/latin-700.css";
++
+ /* Full-screen, touch-first viewport hygiene (see DESIGN.md "Full-screen behavior") */
+ * {
+   margin: 0;
+@@ -5798,3 +5807,126 @@ button {
+ .aar-placings li i.red { background: var(--red); }
+ .aar-placings li i.green { background: var(--side-green); }
+ .aar-placings li i.purple { background: var(--side-purple); }
++
++/* ================================================ RA2-look chrome (pass) --- */
++/* Machined C&C-style chrome: brushed metal on dark slate, hard bevels, square
++   corners, recessed instrument windows. Paint only — every widget keeps its DOM
++   id, class and data source (src/ui/hud.ts, src/ui/powers.ts): the four tabs read
++   their same unit lists, #scrap/#rate stay the scrap counter, .pw-meter stays the
++   calldown credit fed by api.ctrl.powerMeter(), canvas#minimap stays the radar.
++   Semantic colours are untouched: --green is our own selection, --red the enemy. */
++:root {
++  --r: 5px;
++  --panel: rgba(19, 23, 28, 0.9);
++  --panel-solid: #14181d;
++  --line: rgba(151, 166, 181, 0.36);
++  --line-hi: rgba(196, 210, 224, 0.55);
++}
++.buildbar {
++  background: linear-gradient(180deg, #2b323a 0, #1c2228 10px, #171c21 45%, #12161a 100%);
++  border-color: #05070a;
++  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 0 1px rgba(126, 140, 155, 0.16), 0 6px 22px rgba(0, 0, 0, 0.55);
++}
++.card {
++  background: linear-gradient(180deg, #262d34 0, #191e23 12px, #14181d 100%);
++  border: 1px solid #05070a;
++  outline: 1px solid rgba(151, 166, 181, 0.3);
++  border-radius: 6px;
++  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 40px rgba(0, 0, 0, 0.66);
++}
++.res,
++.clock,
++.pw-meter {
++  background: #0a0e11;
++  border: 1px solid #3a444e;
++  border-radius: 4px;
++  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), inset 0 -1px 0 rgba(255, 255, 255, 0.05);
++  backdrop-filter: none;
++  -webkit-backdrop-filter: none;
++}
++.pw-meter {
++  color: #ffd23f;
++}
++.minimap-wrap {
++  background: linear-gradient(180deg, #343c45, #1b2026 60%, #14181d);
++  border: 1px solid #05070a;
++  border-radius: 5px;
++  padding: 18px 4px 4px;
++  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 16px rgba(0, 0, 0, 0.5);
++}
++.minimap-wrap::before {
++  content: "RADAR";
++  position: absolute;
++  top: 1px;
++  left: 0;
++  right: 0;
++  text-align: center;
++  font-size: 10px;
++  font-weight: 700;
++  letter-spacing: 3px;
++  color: #9fb0c0;
++}
++#minimap {
++  border-radius: 3px;
++}
++.tab {
++  background: linear-gradient(180deg, #333b44, #20262c 55%, #1a1f24);
++  border: 1px solid #05070a;
++  border-radius: 4px;
++  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(126, 140, 155, 0.14);
++  color: #cfd7df;
++  font-weight: 700;
++  text-transform: uppercase;
++  letter-spacing: 0.6px;
++}
++.tab.on {
++  color: #ffe9a8;
++  background: linear-gradient(180deg, #3a434e, #262d34);
++  border-color: #6b5b2c;
++  box-shadow: inset 0 2px 0 var(--gold), inset 0 1px 0 rgba(255, 255, 255, 0.16);
++}
++.tab .tbadge {
++  border-radius: 4px;
++}
++.bb {
++  background: linear-gradient(180deg, #242b33, #12171b 70%);
++  border: 1px solid #05070a;
++  border-radius: 4px;
++  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13);
++}
++.selpanel {
++  border-radius: 5px;
++}
++
++@media (orientation: landscape) {
++  /* the sidebar grows to a machined column; the radar moves to its head */
++  .buildbar {
++    width: calc(208px + env(safe-area-inset-right));
++    border-radius: 6px 0 0 6px;
++    padding-top: calc(max(6px, env(safe-area-inset-top)) + 158px);
++  }
++  .minimap-wrap {
++    right: calc(env(safe-area-inset-right) + 45px);
++    left: auto;
++    top: max(6px, env(safe-area-inset-top));
++    z-index: 6;
++  }
++  /* no emoji font in some runtimes: the tabs carry their text labels here too */
++  .tab .tl2 {
++    display: inline;
++  }
++  .tab {
++    font-size: 12px;
++    padding: 4px 6px;
++    min-height: 34px;
++  }
++  .tab .ti {
++    font-size: 14px;
++  }
++  .card {
++    right: calc(222px + env(safe-area-inset-right));
++  }
++  .topbar {
++    max-width: calc(100vw - 480px);
++  }
++}
+-- 
+2.53.0
+

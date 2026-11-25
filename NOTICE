@@ -1,0 +1,6 @@
+battledrones-cc
+This repository is a derivative of Battle Drones (https://github.com/simonw/battledrones),
+created by Simon Willison and contributors, licensed under the Apache License, Version 2.0
+(see LICENSE). All code, history, art and records below upstream commit ca4f13b are theirs.
+Modifications (rendering and HUD look, cc-look/ evidence, this file, README notes, removal of
+.github/workflows/pages.yml) are listed in README.md. Not affiliated with Electronic Arts or Westwood Studios.

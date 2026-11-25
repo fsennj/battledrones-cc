@@ -1,0 +1,66 @@
+From de17db48c9da840f85b86319c067368dbfb6b41b Mon Sep 17 00:00:00 2001
+From: Franz Senn <61477285+fsennj@users.noreply.github.com>
+Date: Wed, 25 Nov 2026 00:43:50 +0000
+Subject: [PATCH 4/6] look: Gelaende olive-stahl, hart gezeichnete Kante,
+ schmalerer Rand-Skirt (SKIRT 12, NEAR 4, FLAT 3, bdDim)
+
+---
+ src/game/three/stage.ts        | 2 +-
+ src/game/three/terrain-glsl.ts | 4 ++--
+ src/game/three/terrain.ts      | 8 ++++----
+ 3 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/src/game/three/stage.ts b/src/game/three/stage.ts
+index bff51a1..1d2e3af 100644
+--- a/src/game/three/stage.ts
++++ b/src/game/three/stage.ts
+@@ -32,7 +32,7 @@ interface Look {
+ 
+ const LOOKS: Record<Biome, Look> = {
+   temperate: {
+-    bg: 0x0b100c, sky: 0xc6d8ff, ground: 0x8a8a6a, hemi: 0.6, sun: 0xfff0d8, sunI: 4.2, exposure: 1.0,
++    bg: 0x0b100c, sky: 0xc6d8ff, ground: 0x6f7260, hemi: 0.6, sun: 0xfff0d8, sunI: 4.2, exposure: 1.0,
+     fog: { shroud: 0x0b1219, wisp: 0x1c2a35, memory: [0.86, 0.96, 1.12], cloud: [1, 0.92, 0.8] }
+   },
+   desert: {
+diff --git a/src/game/three/terrain-glsl.ts b/src/game/three/terrain-glsl.ts
+index 943912d..62e61f8 100644
+--- a/src/game/three/terrain-glsl.ts
++++ b/src/game/three/terrain-glsl.ts
+@@ -47,9 +47,9 @@ vec2 bdMirror( vec2 p ) {
+ }
+ /** Out of bounds: a little darker and greyer right from the edge. */
+ vec3 bdDim( vec3 c, float od ) {
+-  float k = smoothstep( 0.0, 0.9, od );
++  float k = smoothstep( 0.0, 0.55, od );
+   float l = dot( c, vec3( 0.3, 0.55, 0.15 ) );
+-  return mix( c, vec3( l ), k * 0.4 ) * ( 1.0 - k * 0.3 );
++  return mix( c, vec3( l ), k * 0.6 ) * ( 1.0 - k * 0.5 );
+ }
+ `;
+ 
+diff --git a/src/game/three/terrain.ts b/src/game/three/terrain.ts
+index 97c01c3..0bc40c8 100644
+--- a/src/game/three/terrain.ts
++++ b/src/game/three/terrain.ts
+@@ -32,13 +32,13 @@ export const WATER_LEVEL = -0.12;
+ /** Lattice resolution: height samples per tile. */
+ const RES = 3;
+ /** How far the skirt runs past the map's edge (tiles); it has faded out by there. */
+-const SKIRT = 20;
++const SKIRT = 12;
+ /** Past this (tiles out) the skirt is open ground: no mirrored paint, relief or water. */
+-const NEAR = 6;
++const NEAR = 4;
+ /** The mirrored relief has eased flat this far out (tiles); mirrored water and lava stop here. */
+-const FLAT = 4;
++const FLAT = 3;
+ /** Near-skirt grid lines past the lattice-fine first tile: coarser as it flattens. */
+-const NEAR_LINES = [1.5, 2, 2.5, 3, FLAT, 5, NEAR];
++const NEAR_LINES = [1.5, 2, 2.5, FLAT];
+ /**
+  * Fog texel targets (see the fog shader in materials.ts). Unexplored is already a full shroud at a
+  * tile's heart; Uncharted's 1 also pushes it right up to the explored edge, past the edge's mist bank.
+-- 
+2.53.0
+
