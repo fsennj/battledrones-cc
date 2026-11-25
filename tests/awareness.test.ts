@@ -472,18 +472,23 @@ describe("edge arrows geometry", () => {
       const q = rig.toward(x, y, c.x, c.y);
       return Math.atan2(q.y - c.y, q.x - c.x);
     };
-    // the tilted camera can't see this far south: project() mirrors these up past the horizon
-    for (const x of [8, 48, 90]) expect(rig.project(x, 92).behind).toBe(true);
-    expect(aim(48, 92)).toBeCloseTo(Math.PI / 2, 1);
-    const se = aim(90, 92);
+    // the ground a tilted camera can no longer see lies south of its own plane:
+    // y > blickY + distance / cos(pitch). Derived from the rig, not a fixed tile row,
+    // so the check survives a look change (FOV/pitch are a look choice, not the sim).
+    const south = 10 + rig.distance / Math.cos(rig.pitchFor(rig.zoom)) + 1;
+    // project() mirrors these points up past the horizon
+    for (const x of [8, 48, 90]) expect(rig.project(x, south).behind).toBe(true);
+    expect(aim(48, south)).toBeCloseTo(Math.PI / 2, 1);
+    const se = aim(90, south);
     expect(se > 0 && se < Math.PI / 2).toBe(true);
-    const sw = aim(8, 92);
+    const sw = aim(8, south);
     expect(sw > Math.PI / 2 && sw < Math.PI).toBe(true);
     // the marker goes on the bottom edge, and the direction doesn't jump across the camera plane
-    const q = rig.toward(48, 92, c.x, c.y);
+    const q = rig.toward(48, south, c.x, c.y);
     expect(edgePoint(R, q.x, q.y).y).toBeCloseTo(R.y1);
     let y = 60;
-    while (!rig.project(70, y).behind) y += 0.5;
+    while (!rig.project(70, y).behind && y < south + 40) y += 0.5;
+    expect(rig.project(70, y).behind).toBe(true);
     expect(rig.project(70, y - 0.5).behind).toBe(false);
     expect(Math.abs(aim(70, y) - aim(70, y - 0.5))).toBeLessThan(0.05);
     // a point the camera can see comes back as drawn

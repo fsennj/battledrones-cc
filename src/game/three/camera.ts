@@ -8,10 +8,10 @@ import * as THREE from "three";
  * (the sim's y), y up.
  */
 
-export const FOV = 34;
+export const FOV = 12;
 /** Pitch (degrees below the horizon) zoomed all the way out / all the way in. */
-const PITCH_FAR = 62;
-const PITCH_NEAR = 47;
+const PITCH_FAR = 45;
+const PITCH_NEAR = 45;
 const ZOOM_FAR = 18;
 const ZOOM_NEAR = 110;
 
