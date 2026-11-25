@@ -1497,6 +1497,32 @@ export class GameScene {
       ctx.strokeStyle = "#3a2a00";
       ctx.stroke();
     }
+    // RA-look: a multi-unit selection gets a green corner-bracket frame around all of
+    // it (a lone unit keeps just its own ring). Own side only: the green stays ours.
+    if (this.ctrl.selectedUnits.size > 1) {
+      let x0 = Infinity;
+      let y0 = Infinity;
+      let x1 = -Infinity;
+      let y1 = -Infinity;
+      let n = 0;
+      for (const id of this.ctrl.selectedUnits) {
+        const u = w.units.get(id);
+        if (!u || u.faction !== PLAYER || !this.entities.isShown(id)) continue;
+        const p = this.entities.pos(id);
+        if (!p) continue;
+        const s = rig.project(p.x, p.y, p.top * 0.5);
+        if (s.behind) continue;
+        x0 = Math.min(x0, s.x);
+        y0 = Math.min(y0, s.y);
+        x1 = Math.max(x1, s.x);
+        y1 = Math.max(y1, s.y);
+        n++;
+      }
+      if (n > 1) {
+        const pad = 18;
+        bracketBox(ctx, x0 - pad, y0 - pad, x1 - x0 + pad * 2, y1 - y0 + pad * 2);
+      }
+    }
     if (this.boxRect) {
       const b = this.boxRect;
       // edges through device pixel centres: the strokes sit on the pixel grid instead of straddling it
@@ -1506,6 +1532,7 @@ export class GameScene {
       const bh = pxCentre(Math.max(b.y0, b.y1), dpr) - y;
       ctx.fillStyle = "rgba(126,242,155,0.08)";
       ctx.fillRect(x, y, bw, bh);
+      bracketBox(ctx, x, y, bw, bh);
       // marching green dashes, each with a 1 px dark rim (a dash 1 px longer at both ends): the edge
       // reads on snow, and on sand the gaps stay sand instead of making a dark frame
       const march = (performance.now() / 40) % 10;
@@ -1855,6 +1882,35 @@ const goliathDown = [false, false, false];
 /** The centre of the device pixel under CSS coordinate `v`. */
 function pxCentre(v: number, dpr: number): number {
   return (Math.floor(v * dpr) + 0.5) / dpr;
+}
+
+/** RA-style corner brackets: short solid Ls at the four corners of a screen-space box. */
+function bracketBox(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  const arm = Math.max(6, Math.min(13, Math.min(w, h) / 3));
+  ctx.save();
+  ctx.lineCap = "square";
+  ctx.lineJoin = "miter";
+  for (const [cx, cy, sx, sy] of [
+    [x, y, 1, 1],
+    [x + w, y, -1, 1],
+    [x, y + h, 1, -1],
+    [x + w, y + h, -1, -1],
+  ] as const) {
+    // dark rim first, then our own selection green on top (reads on snow and on sand alike)
+    for (const [lw, col] of [
+      [4.5, "rgba(4,7,12,0.6)"],
+      [2.5, "rgba(126,242,155,0.95)"],
+    ] as const) {
+      ctx.lineWidth = lw;
+      ctx.strokeStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(cx + sx * arm, cy);
+      ctx.lineTo(cx, cy);
+      ctx.lineTo(cx, cy + sy * arm);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
 }
 
 /** Add a rank chevron centred on (x, y), scaled by k, to the current path (drawn gold by drawScreen). */

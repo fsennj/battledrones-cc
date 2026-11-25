@@ -5911,9 +5911,21 @@ button {
     top: max(6px, env(safe-area-inset-top));
     z-index: 6;
   }
-  /* no emoji font in some runtimes: the tabs carry their text labels here too */
+  /* no emoji font in some runtimes: the tabs carry their text labels here too.
+     2x2: four labels do not fit one row inside a 208 px column. */
+  .tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .tab {
+    min-width: 0;
+    overflow: hidden;
+    letter-spacing: 0.3px;
+  }
   .tab .tl2 {
     display: inline;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .tab {
     font-size: 12px;

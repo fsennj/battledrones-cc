@@ -191,6 +191,9 @@ export function patchGround(s: Shader, u: GroundUniforms, rock: RockUniforms | n
         vec3 soft = texture2D( map, vMapUv, blur + 1.5 ).rgb;
         float sharp = mix( uDetail.z, -0.5, smoothstep( 0.35, 0.8, vFowW.y ) ) * ( 1.0 - smoothstep( 0.0, 1.0, od ) );
         diffuseColor.rgb = max( diffuseColor.rgb + ( diffuseColor.rgb - soft ) * sharp, 0.0 );
+        // RA-look: the baked paint is muted toward olive steel (its green turf glowed too much)
+        float ol = dot( diffuseColor.rgb, vec3( 0.30, 0.50, 0.20 ) );
+        diffuseColor.rgb = mix( diffuseColor.rgb, vec3( ol * 0.78, ol * 0.86, ol * 0.60 ), 0.45 );
       }
       #endif`
     )
