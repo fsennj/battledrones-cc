@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { discTexture } from "./textures";
+import { POST } from "./post";
 
 /**
  * Shared materials and the shader patches every lit object gets:
@@ -90,6 +91,7 @@ float fowAt( vec2 p ) { return texture2D( uFowMap, ( p + 1.0 ) / uFowSize ).r; }
 // fog texels: 0 visible, 0.5 explored, 0.94 unexplored, 1 under Uncharted (blurred between; terrain.ts FOG_TARGET)
 const fragCode = (clouds: boolean) => /* glsl */ `
   {
+    ${POST ? "// (post: the encode is OutputPass's job, so the fog's display-space maths runs in sRGB and goes back to linear)\n    gl_FragColor = sRGBTransferOETF( gl_FragColor );" : ""}
     vec2 fp = vFowW.xz;
     ${clouds ? "float cl = texture2D( uCloudMap, fp * 0.032 + uCloudOffset ).r; gl_FragColor.rgb *= 1.0 - cl * uCloudK * uCloudTint;" : ""}
     float fw = 0.0;
@@ -118,6 +120,7 @@ const fragCode = (clouds: boolean) => /* glsl */ `
       // a faint mist bank where the shroud meets the known map
       gl_FragColor.rgb = col + uFowWisp * ( shroud * ( 1.0 - shroud ) * 0.5 );
     }
+    ${POST ? "gl_FragColor = sRGBTransferEOTF( gl_FragColor );" : ""}
   }
 `;
 

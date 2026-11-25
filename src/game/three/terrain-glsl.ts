@@ -1,3 +1,4 @@
+import { POST } from "./post";
 import type * as THREE from "three";
 
 /**
@@ -61,7 +62,9 @@ const FOG_MIRRORED = "fowAt( bdMirror( fp ) )";
 const FAR_FADE = /* glsl */ `
   {
     float k = smoothstep( 0.0, uSkirt, bdOutside( vFowW.xz ) );
+    ${POST ? "gl_FragColor = sRGBTransferOETF( gl_FragColor ); // (post: this mix is display-space)" : ""}
     gl_FragColor.rgb = mix( gl_FragColor.rgb, uFarColor, k );
+    ${POST ? "gl_FragColor = sRGBTransferEOTF( gl_FragColor );" : ""}
   }
   #include <premultiplied_alpha_fragment>
 `;

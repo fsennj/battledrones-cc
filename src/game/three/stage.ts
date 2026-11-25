@@ -6,6 +6,7 @@ import { GroundGfx } from "./ground-gfx";
 import { SquadRig } from "./infantry";
 import { discMat, glowMat, modelMat, setFogLook, type FogLook } from "./materials";
 import { ScreenLayer } from "./screen";
+import { POST, PostFx } from "./post";
 
 /**
  * The WebGL stage: renderer, scene, sun and sky light per biome, the camera
@@ -128,6 +129,7 @@ export class Stage {
   readonly sun: THREE.DirectionalLight;
   readonly hemi: THREE.HemisphereLight;
   private flashEl: HTMLDivElement;
+  private post: PostFx | null = null;
   private shadowHalf = 0;
   /** Adaptive resolution: the 3D view's current pixel ratio and the controller's state. */
   private ratio: number;
@@ -151,6 +153,7 @@ export class Stage {
     parent.appendChild(r.domElement);
     this.renderer = r;
     this.screen = new ScreenLayer(parent, this.rig);
+    if (POST) this.post = new PostFx(r, this.scene, this.rig.camera);
 
     this.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.4);
     this.scene.add(this.hemi);
@@ -212,6 +215,7 @@ export class Stage {
     const w = this.parent.clientWidth || window.innerWidth;
     const h = this.parent.clientHeight || window.innerHeight;
     this.renderer.setSize(w, h, false);
+    this.post?.setSize(w, h, this.ratio);
     this.rig.setViewport(w, h);
     this.screen.resize(w, h, this.dpr);
   }
@@ -325,7 +329,8 @@ export class Stage {
 
   render(): void {
     this.fitShadow();
-    this.renderer.render(this.scene, this.rig.camera);
+    if (this.post) this.post.render();
+    else this.renderer.render(this.scene, this.rig.camera);
   }
 
   /** A full-screen flash that fades over `ms`. */
