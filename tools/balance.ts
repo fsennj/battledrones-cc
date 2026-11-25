@@ -28,7 +28,7 @@ import type { Faction, UnitKind, World } from "../src/sim/types";
 import { createWorld, spawnUnit } from "../src/sim/world";
 
 const COMBAT: UnitKind[] = [
-  "stinger", "flak-crawler", "mortar", "mastodon", "lancer", "wasp", "raptor", "hornet", "trooper", "rocket-squad", "sniper"
+  "stinger", "flak-crawler", "mortar", "mastodon", "lancer", "wasp", "raptor", "hornet", "juggernaut", "trooper", "rocket-squad", "sniper"
 ];
 const BUDGET = 1800;
 
