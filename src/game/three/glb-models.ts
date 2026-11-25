@@ -20,7 +20,9 @@ export interface GlbParts {
   turret?: THREE.BufferGeometry;
 }
 
-const GLB_UNITS: Partial<Record<UnitKind, string>> = { juggernaut: "assets/models/juggernaut.glb" };
+const GLB_UNITS: Partial<Record<UnitKind, string>> = Object.fromEntries(
+  (["juggernaut", "stinger", "mastodon", "lancer", "harvester"] as UnitKind[]).map((k) => [k, `assets/models/${k}.glb`])
+);
 const loaded = new Map<UnitKind, GlbParts>();
 
 export const glbUnit = (kind: UnitKind): GlbParts | undefined => loaded.get(kind);
