@@ -4,7 +4,7 @@ import { ModelBuilder, type Section, type Vec3 } from "./builder";
 import { GANTRY_STAGES, GOLIATH_RIG, gantryStage, goliathStatic } from "./goliath";
 import { botStatic, botHeight, J, squadStatic, type BotKind } from "./infantry";
 import { modelMat } from "./materials";
-import { glbUnit, recolor } from "./glb-models";
+import { glbBuilding, glbUnit, recolor } from "./glb-models";
 
 /**
  * Every vehicle, aircraft, building and map objective as a procedural
@@ -1334,7 +1334,25 @@ export function invalidateUnit(kind: UnitKind): void {
 }
 
 export function buildingDef(kind: BuildingKind, f: Faction): ModelDef {
-  return def(`b/${f}/${kind}`, () => BUILDING_MODELS[kind](TEAMS[f]));
+  return def(`b/${f}/${kind}`, () => {
+    const d = BUILDING_MODELS[kind](TEAMS[f]);
+    const g = glbBuilding(kind);
+    if (!g) return d;
+    // a Blender model replaces the building's shape; mount, muzzle and height stay as modelled in code
+    const paint = (geo: THREE.BufferGeometry) => (f === "blue" ? geo : recolor(geo, TEAMS.blue, TEAMS[f]));
+    return { ...d, hull: paint(g.hull), turret: g.turret ? paint(g.turret) : d.turret };
+  });
+}
+
+/** Drop a building's cached models after its Blender model arrived. */
+export function invalidateBuilding(kind: BuildingKind): void {
+  for (const k of [...cache.keys()]) if (k.endsWith(`/${kind}`) && k.startsWith("b/")) cache.delete(k);
+}
+
+/** Drop the cached model of a unit or a building after its Blender model arrived. */
+export function invalidateGlb(kind: UnitKind | BuildingKind): void {
+  invalidateUnit(kind as UnitKind);
+  invalidateBuilding(kind as BuildingKind);
 }
 
 export function uplinkDef(): ModelDef {

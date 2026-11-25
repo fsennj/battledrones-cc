@@ -1,12 +1,14 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import type { UnitKind } from "../../sim/types";
+import type { BuildingKind, UnitKind } from "../../sim/types";
 
 /**
  * Hand-built models from Blender (art/blender/*.py -> public/assets/models/*.glb) replace the
- * procedural ones, unit by unit. A GLB carries two nodes, "hull" and "turret", with vertex
- * colours only; the game's palette is recognised in them: blue team shades are recoloured per
- * faction, amber lights become glow. A GLB that fails to load leaves the procedural model.
+ * procedural ones, unit by unit and building by building. A GLB carries two nodes, "hull" and
+ * "turret", with vertex colours only; the game's palette is recognised in them: blue team shades
+ * are recoloured per faction, amber lights become glow. A GLB that fails to load leaves the
+ * procedural model. Buildings carry a "hull" node only, authored at map scale (1 = one tile),
+ * with the same envelope as the procedural one they replace.
  */
 
 interface Team {
@@ -23,9 +25,14 @@ export interface GlbParts {
 const GLB_UNITS: Partial<Record<UnitKind, string>> = Object.fromEntries(
   (["juggernaut", "stinger", "mastodon", "lancer", "harvester"] as UnitKind[]).map((k) => [k, `assets/models/${k}.glb`])
 );
-const loaded = new Map<UnitKind, GlbParts>();
+/** Buildings without moving parts, same trick; the map lists the ones built as GLBs so far. */
+const GLB_BUILDINGS: Partial<Record<BuildingKind, string>> = Object.fromEntries(
+  (["hq", "fab-plant", "depot"] as BuildingKind[]).map((k) => [k, `assets/models/${k}.glb`])
+);
+const loaded = new Map<UnitKind | BuildingKind, GlbParts>();
 
 export const glbUnit = (kind: UnitKind): GlbParts | undefined => loaded.get(kind);
+export const glbBuilding = (kind: BuildingKind): GlbParts | undefined => loaded.get(kind);
 
 /** A GLB mesh as a game geometry: flat-shaded, vertex colours (rgb) and a glow weight. */
 function toGame(src: THREE.BufferGeometry): THREE.BufferGeometry {
@@ -79,11 +86,15 @@ export function recolor(geo: THREE.BufferGeometry, from: Team, to: Team): THREE.
   return g;
 }
 
-/** Load every GLB unit; `onUnit` fires per unit so cached procedural defs can be dropped. */
-export async function loadGlbModels(onUnit: (kind: UnitKind) => void, base = ""): Promise<void> {
+/**
+ * Load every GLB model; `onLoaded` fires per kind (unit or building) so cached procedural defs
+ * can be dropped.
+ */
+export async function loadGlbModels(onLoaded: (kind: UnitKind | BuildingKind) => void, base = ""): Promise<void> {
   const loader = new GLTFLoader();
+  const all = [...(Object.entries(GLB_UNITS) as [UnitKind, string][]), ...(Object.entries(GLB_BUILDINGS) as [BuildingKind, string][])];
   await Promise.all(
-    (Object.entries(GLB_UNITS) as [UnitKind, string][]).map(async ([kind, url]) => {
+    all.map(async ([kind, url]) => {
       try {
         const gltf = await loader.loadAsync(base + url);
         const mesh = (name: string) => {
@@ -95,7 +106,7 @@ export async function loadGlbModels(onUnit: (kind: UnitKind) => void, base = "")
         if (!hull) throw new Error("no hull node");
         const turret = mesh("turret");
         loaded.set(kind, { hull: toGame(hull), turret: turret && toGame(turret) });
-        onUnit(kind);
+        onLoaded(kind);
       } catch (e) {
         console.warn("glb model failed:", kind, e);
       }
