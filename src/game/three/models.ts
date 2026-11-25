@@ -678,7 +678,7 @@ const BUILDING_MODELS: Record<BuildingKind, (t: Team) => ModelDef> = {
     b.torus(0.55, 0.03, [0, 1.06, 0], GM_D, { rot: [Math.PI / 2, 0, 0], seg: 20 });
     // command cab on the crown: amber windows, a team roof, the mast and beacon
     b.drum(0.24, 0.22, 0.14, 8, [0, 1.3, 0], GM_D, { bevel: 0.02 });
-    b.drum(0.245, 0.245, 0.04, 8, [0, 1.3, 0], AMBER, { glow: 0.8, bevel: 0 });
+    b.drum(0.245, 0.245, 0.04, 8, [0, 1.3, 0], AMBER, { bevel: 0 });
     b.drum(0.22, 0.16, 0.06, 8, [0, 1.4, 0], t.main, { bevel: 0.02 });
     b.cyl(0.022, 0.04, 0.5, 6, [0, 1.68, 0], GM_D);
     b.sphere(0.06, [0, 1.95, 0], AMBER, { glow: 1, w: 6, h: 4 });
@@ -689,10 +689,10 @@ const BUILDING_MODELS: Record<BuildingKind, (t: Team) => ModelDef> = {
     for (const [x, z, ry] of [[0, 1.16, 0], [0, -1.16, 0], [1.16, 0, Math.PI / 2], [-1.16, 0, Math.PI / 2]] as Vec3[])
       b.box(1.0, 0.17, 0.025, [x, 0.4, z], t.main, { rot: [0, ry, 0] });
     for (const [x, z, ry] of [[0, -1.17, 0], [1.17, 0, Math.PI / 2], [-1.17, 0, Math.PI / 2]] as Vec3[])
-      b.box(0.8, 0.035, 0.02, [x, 0.25, z], AMBER, { rot: [0, ry, 0], glow: 0.7 });
+      b.box(0.8, 0.035, 0.02, [x, 0.25, z], AMBER, { rot: [0, ry, 0] });
     // the main gate: dark door, lit lintel, hazard-edged ramp
     b.block(0.74, 0.28, 0.06, [0, 0.28, 1.17], GM_D, { bevel: 0.015 });
-    b.box(0.62, 0.035, 0.02, [0, 0.44, 1.2], AMBER, { glow: 1 });
+    b.box(0.62, 0.035, 0.02, [0, 0.44, 1.2], AMBER, {});
     b.box(0.82, 0.04, 0.38, [0, 0.12, 1.36], GM_L, { rot: [0.22, 0, 0] });
     for (const x of [-0.43, 0.43]) b.box(0.06, 0.05, 0.38, [x, 0.125, 1.36], HAZ, { rot: [0.22, 0, 0] });
     b.block(0.3, 0.12, 0.2, [-0.75, 0.64, 0.55], GM_D, { bevel: 0.02 });
@@ -709,7 +709,7 @@ const BUILDING_MODELS: Record<BuildingKind, (t: Team) => ModelDef> = {
     for (let i = 0; i < 3; i++) {
       const z = -0.66 + i * 0.44;
       b.box(1.66, 0.04, 0.46, [0, 0.82, z], GM_L, { rot: [-0.38, 0, 0] });
-      b.box(1.5, 0.16, 0.02, [0, 0.82, z + 0.2], AMBER, { glow: 0.35 });
+      b.box(1.5, 0.16, 0.02, [0, 0.82, z + 0.2], AMBER, {});
       b.box(1.68, 0.035, 0.07, [0, 0.905, z + 0.2], t.main);
     }
     b.block(1.04, 0.46, 0.05, [0, 0.34, 0.51], GM_D, { bevel: 0.012 });
@@ -745,7 +745,7 @@ const BUILDING_MODELS: Record<BuildingKind, (t: Team) => ModelDef> = {
     // control tower
     b.block(0.36, 0.72, 0.36, [0.76, 0.5, -0.76], GM, { bevel: 0.03 });
     b.block(0.46, 0.2, 0.46, [0.76, 0.92, -0.76], GM_L, { bevel: 0.03 });
-    b.box(0.48, 0.07, 0.48, [0.76, 0.94, -0.76], AMBER, { glow: 0.45 });
+    b.box(0.48, 0.07, 0.48, [0.76, 0.94, -0.76], AMBER, {});
     b.block(0.5, 0.04, 0.5, [0.76, 1.04, -0.76], t.main, { bevel: 0.02 });
     b.cyl(0.012, 0.012, 0.3, 4, [0.86, 1.2, -0.86], GM_D);
     light(b, [0.86, 1.36, -0.86], 0.03);
@@ -763,7 +763,7 @@ const BUILDING_MODELS: Record<BuildingKind, (t: Team) => ModelDef> = {
     b.drum(0.92, 0.84, 0.5, 8, [0, 0.37, 0], GM, { rot: [0, Math.PI / 8, 0], bevel: 0.03 });
     b.cyl(0.87, 0.87, 0.1, 8, [0, 0.5, 0], t.dark, { rot: [0, Math.PI / 8, 0] });
     b.drum(0.84, 0.7, 0.08, 8, [0, 0.66, 0], t.main, { rot: [0, Math.PI / 8, 0], bevel: 0.02 });
-    b.sphere(0.48, [0, 0.66, 0], 0xff8a24, { glow: 1, w: 14, h: 6, phi: Math.PI / 2 });
+    b.sphere(0.48, [0, 0.66, 0], 0xff8a24, { w: 14, h: 6, phi: Math.PI / 2 });
     b.torus(0.5, 0.03, [0, 0.72, 0], GM_D, { rot: [Math.PI / 2, 0, 0], seg: 20 });
     b.torus(0.38, 0.025, [0, 0.95, 0], GM_D, { rot: [Math.PI / 2, 0, 0], seg: 18 });
     b.torus(0.48, 0.025, [0, 0.66, 0], GM_D, { seg: 20 });
@@ -775,7 +775,7 @@ const BUILDING_MODELS: Record<BuildingKind, (t: Team) => ModelDef> = {
     }
     b.block(0.42, 0.3, 0.32, [0, 0.27, 0.86], GM_D, { bevel: 0.02 });
     b.block(0.36, 0.025, 0.22, [0, 0.43, 0.86], t.main, { bevel: 0.01 });
-    b.box(0.32, 0.06, 0.02, [0, 0.33, 1.02], AMBER, { glow: 0.8 });
+    b.box(0.32, 0.06, 0.02, [0, 0.33, 1.02], AMBER, {});
     return { hull: b.build(), mount: [0, 0, 0], muzzle: [0, 0.6, 0], rotors: [], height: 1.2 };
   },
 
@@ -975,12 +975,12 @@ const BUILDING_MODELS: Record<BuildingKind, (t: Team) => ModelDef> = {
       b.block(0.36, 0.12, 1.86, [sx * 1.3, 3.1, 0], t.main, { bevel: 0.03, edge: 1.45 });
       b.pairBlock(0.38, 0.05, 0.05, [sx * 1.3, 3.0, 0.93], GM_D);
       for (const z of [-0.88, 0.88]) b.box(0.07, 0.06, 0.07, [xo, 3.2, z], 0x2a2410);
-      b.box(0.04, 0.5, 0.04, [xi, 0.55, -0.4], AMBER, { glow: 0.6 });
+      b.box(0.04, 0.5, 0.04, [xi, 0.55, -0.4], AMBER, {});
     }
     // the crane's mast and cab on the east tower's north end
     b.block(0.16, 0.6, 0.16, [1.3, 3.45, -0.72], GM_D, { bevel: 0.02 });
     b.block(0.26, 0.18, 0.26, [1.3, 3.7, -0.72], HAZ, { bevel: 0.03 });
-    b.box(0.2, 0.08, 0.02, [1.3, 3.72, -0.86], AMBER, { glow: 0.6 });
+    b.box(0.2, 0.08, 0.02, [1.3, 3.72, -0.86], AMBER, {});
     // armour plates waiting on a rack in the north-east corner, and spare parts crated in the south-west
     b.block(0.5, 0.06, 0.34, [0.95, 0.2, -1.12], GM_D, { bevel: 0.01 });
     for (let i = 0; i < 3; i++) b.block(0.42, 0.05, 0.3, [0.95, 0.26 + i * 0.06, -1.12], i === 2 ? t.main : GM, { rot: [0, 0.08 * i, 0], bevel: 0.012, edge: 1.35 });
