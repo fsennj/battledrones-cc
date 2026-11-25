@@ -194,8 +194,8 @@ function modelMaterial(v: VariantSpec, elite: boolean, canopy = false, clear = f
   const m = new THREE.MeshStandardMaterial({
     vertexColors: true,
     flatShading: true,
-    roughness: v.roughness ?? 0.58,
-    metalness: v.metalness ?? 0.35,
+    roughness: v.roughness ?? 0.78,
+    metalness: v.metalness ?? 0.14,
     side: THREE.DoubleSide,
     transparent: !!v.ghost,
     opacity: v.ghost ? 0.6 : 1,
