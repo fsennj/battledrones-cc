@@ -32,7 +32,9 @@ export type UnitKind =
    * systems it loses as it takes damage, and anchored, a drop-off, a build
    * ring and infantry training. Built at the Gantry.
    */
-  | "goliath";
+  | "goliath"
+  /** Siege artillery walker: huge reach, devastating against buildings, helpless up close. Appended last so existing unit indices stay put. */
+  | "juggernaut";
 
 export type BuildingKind =
   | "hq"

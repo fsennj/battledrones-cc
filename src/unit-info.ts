@@ -36,6 +36,11 @@ export const FEATURES: Record<UnitKind, string[]> = {
     "Shells are real projectiles with splash, aimed where the target was — fast units can dodge them.",
     "Has a minimum range and light armour: anything that closes the distance tears it apart."
   ],
+  juggernaut: [
+    "Siege artillery walker: out-ranges the Mortar by half again, and one shell razes a building.",
+    "Slow shells with big splash, aimed where the target was. It needs a spotter or a Radar to see what it shoots at: its own sight is short.",
+    "Cannot fire inside its minimum range and cannot hit air. Anything that closes the distance destroys it: keep it behind an escort."
+  ],
   mastodon: [
     "Super-heavy twin-cannon tank with by far the most HP of any tank.",
     "Its cannons hit heavy armour harder, and it crushes Stingers, Flak and Mortars.",

@@ -16,7 +16,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 // (src/game/assets.ts UNIT_KINDS and BUILDING_KINDS, then the two map objectives)
 const UNITS = [
   "harvester", "scout", "stinger", "flak-crawler", "mortar", "mastodon", "lancer",
-  "wasp", "raptor", "hornet", "mender", "trooper", "rocket-squad", "sniper", "condor", "goliath"
+  "wasp", "raptor", "hornet", "mender", "trooper", "rocket-squad", "sniper", "condor", "goliath", "juggernaut"
 ];
 const BUILDINGS = ["hq", "fab-plant", "airpad", "tech-lab", "depot", "turret", "sam-site", "radar", "assembly-bay", "gantry"];
 const OBJECTIVES = ["uplink", "supply-crate"];

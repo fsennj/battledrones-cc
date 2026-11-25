@@ -330,6 +330,39 @@ const UNIT_MODELS: Record<UnitKind, UnitBuilder> = {
     return { hull, turret: tu.build(), mount: [0, 0.39, 0.06], muzzle: [0, 0.1, -0.82], rotors: [], height: 0.75 };
   },
 
+  juggernaut: (t) => {
+    // siege walker: a long, low, wide tracked hull with recoil spades at the back, a team-colour
+    // armoured shield over the crew, and one huge barrel raised on a pitched cradle
+    const b = hullB();
+    tracks(b, 0.4, 0.26, 0.26, 0.64, -0.4, t.main);
+    tracks(b, 0.4, 0.26, 0.26, 0.64, 0.4, t.main);
+    b.block(0.86, 0.22, 1.3, [0, 0.3, 0], GM, { taper: 0.1, bevel: 0.045 });
+    b.block(0.8, 0.09, 0.22, [0, 0.28, -0.68], GM_D, { rot: [0.5, 0, 0], bevel: 0.02 });
+    b.pairBlock(0.06, 0.16, 1.2, [0.66, 0.24, 0], t.main, { bevel: 0.012 });
+    // forward armour wedges in team colour, so it reads as a siege engine from above
+    b.pairBlock(0.2, 0.03, 0.34, [0.22, 0.43, -0.42], t.main, { bevel: 0.012 });
+    b.block(0.5, 0.05, 0.3, [0, 0.4, 0.5], GM_D, { bevel: 0.015 });
+    for (const x of [-0.14, 0, 0.14]) b.box(0.08, 0.02, 0.2, [x, 0.43, 0.5], BARREL);
+    // recoil spades folded behind the tracks
+    b.pairBlock(0.26, 0.34, 0.06, [0.28, 0.24, 0.76], GM_D, { rot: [-0.45, 0, 0], bevel: 0.012 });
+    light(b, [0.24, 0.27, -0.66]);
+    light(b, [-0.24, 0.27, -0.66]);
+    const hull = b.build();
+    const tu = partB();
+    tu.block(0.66, 0.22, 0.6, [0, 0.11, 0.06], GM, { taper: 0.16, bevel: 0.04 });
+    tu.block(0.46, 0.05, 0.36, [0, 0.235, 0.06], t.main, { bevel: 0.015 });
+    tu.pairBlock(0.05, 0.14, 0.34, [0.36, 0.11, 0.04], t.main, { bevel: 0.012 });
+    const pitch = 0.62;
+    const at: Vec3 = [0, 0.17, -0.1];
+    barrel(tu, at, 0.1, 0.95, pitch, BARREL, 10);
+    for (const k of [0.15, 0.4, 0.65]) barrel(tu, barrelTip(at, k, pitch), 0.125, 0.07, pitch, GM_D, 10);
+    barrel(tu, barrelTip(at, 0.9, pitch), 0.15, 0.1, pitch, GM_D, 10);
+    const tip = barrelTip(at, 0.97, pitch);
+    tu.cyl(0.08, 0.08, 0.006, 10, tip, TRACK, { rot: [pitch - Math.PI / 2, 0, 0] });
+    light(tu, [-0.16, 0.22, 0.2], 0.03);
+    return { hull, turret: tu.build(), mount: [0, 0.4, 0.1], muzzle: tip, rotors: [], height: 0.85 };
+  },
+
   lancer: (t) => {
     // a hover tank: a real tank hull riding on a dark armoured skirt, the lift field's amber glow
     // leaking out round its foot (no tracks, no wheels), and a long laser lance with focusing coils
@@ -1310,7 +1343,9 @@ const UNIT_SIZE: Record<UnitKind, number> = {
   trooper: 0.8, "rocket-squad": 0.8, sniper: 0.7,
   condor: 1.5,
   // (shoulders and pauldrons: it stands over twice as tall, see goliath.ts)
-  goliath: 2.05
+  goliath: 2.05,
+  // (a long barrel on a tracked hull: the longest ground unit after the Goliath)
+  juggernaut: 1.7
 };
 /** Robot infantry is built at map scale (tiles): formations sized to the squad's radius. */
 const MAP_SCALE = new Set<UnitKind>(["trooper", "rocket-squad", "sniper"]);

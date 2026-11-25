@@ -367,7 +367,7 @@ describe("the command codec", () => {
     // a type outside the table
     for (let t = COMMAND_TYPES.length; t < 32; t++) expect(one(bits([t, 5], [0, 40])), `type ${t}`).toThrow(/outside its table/);
     // a unit kind or building kind outside its table
-    expect(one(bits([T("produce"), 5], [0b010, 3], [16, 5]))).toThrow(/outside its table/);
+    expect(one(bits([T("produce"), 5], [0b010, 3], [17, 5]))).toThrow(/outside its table/);
     expect(one(bits([T("startBuilding"), 5], [10, 4]))).toThrow(/outside its table/);
     // sameAsPrevious with no previous list
     expect(one(bits([T("stop"), 5], [1, 1]))).toThrow(/no previous/);
@@ -434,7 +434,7 @@ describe("the command codec", () => {
 
   it("has complete, explicit tables", () => {
     expect(TABLES_COMPLETE).toBe(true);
-    expect(CODEC_VERSION).toBe(1);
+    expect(CODEC_VERSION).toBe(2);
     expect(new Set(COMMAND_TYPES).size).toBe(COMMAND_TYPES.length);
     expect(COMMAND_TYPES.length).toBe(20);
     expect(new Set(UNIT_KINDS)).toEqual(new Set(Object.keys(UNITS)));

@@ -67,6 +67,7 @@ export const VOICES: Record<UnitKind, VoiceSpec> = {
   stinger: { f0: 320, wave: "square", formants: [800, 1800], q: 7, syl: 70, dry: 0.15, gain: 1.0 },
   "flak-crawler": { f0: 230, wave: "square", formants: [700, 1500], q: 6, syl: 80, dry: 0.12, fm: { hz: 31, depth: 0.05 }, gain: 0.6 },
   mortar: { f0: 150, wave: "sawtooth", formants: [560, 1100], q: 7, syl: 115, dry: 0.12, gain: 1.2 },
+  juggernaut: { f0: 62, wave: "sawtooth", formants: [420, 760], q: 6, syl: 170, dry: 0.1, gain: 1.25 },
   mastodon: { f0: 80, wave: "sawtooth", formants: [500, 900], q: 6, syl: 140, dry: 0.1, gain: 1.2 },
   lancer: { f0: 440, wave: "sine", formants: [1000, 2400], q: 5, syl: 90, dry: 0.8, partial: 2.01, gain: 0.58 },
   wasp: { f0: 220, wave: "sawtooth", formants: [1200, 2600], q: 8, syl: 50, dry: 0.1, fm: { hz: 60, depth: 0.25 }, gain: 1.33 },

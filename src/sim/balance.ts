@@ -205,6 +205,15 @@ export const UNITS: Record<UnitKind, UnitStats> = {
     cost: 1600, hp: 3000, speed: 1.0, sight: 10, domain: "ground", armor: "heavy",
     targets: "both", dps: 125, range: 8,
     buildTime: 60, builtAt: "gantry", radius: 1.0, alwaysVisible: true
+  },
+  // Siege walker: twice a Mortar's reach, heavy splash, one slow shell. Needs a spotter
+  // (its own sight is only 6) and an escort: inside minRange or against anything that moves it is helpless.
+  juggernaut: {
+    name: "Juggernaut", role: "Siege artillery walker. Outranges everything, razes bases. Helpless up close.",
+    cost: 650, hp: 900, speed: 0.9, sight: 6, domain: "ground", armor: "heavy",
+    targets: "ground", dps: 34, range: 13, minRange: 4, shotInterval: 5,
+    splash: 1.6, projectileSpeed: 5, dmgType: "explosive", fx: "shell",
+    buildTime: 20, builtAt: "fab-plant", requires: "tech-lab", turret: true, radius: 0.62
   }
 };
 

@@ -50,7 +50,7 @@
  */
 import type { BuildingKind, Command, Faction, PowerKind, UnitKind } from "../sim/types";
 
-export const CODEC_VERSION = 1;
+export const CODEC_VERSION = 2;
 
 /** A split piece is at most this many bits, so any command fits in an empty turn. */
 export const C_MAX = 96;
@@ -67,7 +67,7 @@ export const COMMAND_TYPES = [
 
 export const UNIT_KINDS = [
   "harvester", "scout", "stinger", "flak-crawler", "mortar", "mastodon", "lancer", "wasp", "raptor", "hornet",
-  "mender", "trooper", "rocket-squad", "sniper", "condor", "goliath"
+  "mender", "trooper", "rocket-squad", "sniper", "condor", "goliath", "juggernaut"
 ] as const satisfies readonly UnitKind[];
 
 export const BUILDING_KINDS = [
