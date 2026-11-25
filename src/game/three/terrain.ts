@@ -32,13 +32,13 @@ export const WATER_LEVEL = -0.12;
 /** Lattice resolution: height samples per tile. */
 const RES = 3;
 /** How far the skirt runs past the map's edge (tiles); it has faded out by there. */
-const SKIRT = 20;
+const SKIRT = 12;
 /** Past this (tiles out) the skirt is open ground: no mirrored paint, relief or water. */
-const NEAR = 6;
+const NEAR = 4;
 /** The mirrored relief has eased flat this far out (tiles); mirrored water and lava stop here. */
-const FLAT = 4;
+const FLAT = 3;
 /** Near-skirt grid lines past the lattice-fine first tile: coarser as it flattens. */
-const NEAR_LINES = [1.5, 2, 2.5, 3, FLAT, 5, NEAR];
+const NEAR_LINES = [1.5, 2, 2.5, FLAT];
 /**
  * Fog texel targets (see the fog shader in materials.ts). Unexplored is already a full shroud at a
  * tile's heart; Uncharted's 1 also pushes it right up to the explored edge, past the edge's mist bank.

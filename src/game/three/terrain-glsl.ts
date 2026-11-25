@@ -47,9 +47,9 @@ vec2 bdMirror( vec2 p ) {
 }
 /** Out of bounds: a little darker and greyer right from the edge. */
 vec3 bdDim( vec3 c, float od ) {
-  float k = smoothstep( 0.0, 0.9, od );
+  float k = smoothstep( 0.0, 0.55, od );
   float l = dot( c, vec3( 0.3, 0.55, 0.15 ) );
-  return mix( c, vec3( l ), k * 0.4 ) * ( 1.0 - k * 0.3 );
+  return mix( c, vec3( l ), k * 0.6 ) * ( 1.0 - k * 0.5 );
 }
 `;
 

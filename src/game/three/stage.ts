@@ -32,7 +32,7 @@ interface Look {
 
 const LOOKS: Record<Biome, Look> = {
   temperate: {
-    bg: 0x0b100c, sky: 0xc6d8ff, ground: 0x8a8a6a, hemi: 0.6, sun: 0xfff0d8, sunI: 4.2, exposure: 1.0,
+    bg: 0x0b100c, sky: 0xc6d8ff, ground: 0x6f7260, hemi: 0.6, sun: 0xfff0d8, sunI: 4.2, exposure: 1.0,
     fog: { shroud: 0x0b1219, wisp: 0x1c2a35, memory: [0.86, 0.96, 1.12], cloud: [1, 0.92, 0.8] }
   },
   desert: {
