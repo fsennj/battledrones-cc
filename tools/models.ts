@@ -25,14 +25,18 @@
 // squad kind shows one of its robots, weapon up.
 import * as THREE from "three";
 import { Stage } from "../src/game/three/stage";
-import { buildingDef, crateDef, instance, pileDef, podDef, uplinkDef, unitDef, unitScale, chuteGeometry, modelMesh, rubbleGeometry, TRACK } from "../src/game/three/models";
+import { invalidateUnit, buildingDef, crateDef, instance, pileDef, podDef, uplinkDef, unitDef, unitScale, chuteGeometry, modelMesh, rubbleGeometry, TRACK } from "../src/game/three/models";
 import { GoliathRig, type GoliathPose } from "../src/game/three/goliath";
 import { J, baySeats, SquadRig, type BotKind } from "../src/game/three/infantry";
 import { setVariant } from "../src/game/three/materials";
 import { ModelBuilder } from "../src/game/three/builder";
 import { UNIT_KINDS, BUILDING_KINDS } from "../src/game/assets";
+import { loadGlbModels } from "../src/game/three/glb-models";
 import { UNITS } from "../src/sim/balance";
 import type { Faction, UnitKind } from "../src/sim/types";
+
+// Blender models replace the procedural ones (as in the game, src/game/assets.ts)
+await loadGlbModels(invalidateUnit, "../"); // (this page lives in tools/)
 
 const q = new URLSearchParams(location.search);
 const stage = new Stage(document.getElementById("game")!, Math.min(2, devicePixelRatio));

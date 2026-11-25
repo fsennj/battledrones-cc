@@ -5,6 +5,8 @@ import { mapById } from "../sim/maps";
 import { mapAssetBase, terrainChunkUrl } from "./map-art";
 import { paintMapPixels, paintTerrainArt } from "./terrain-paint";
 import type { TerrainArt } from "./three/terrain";
+import { loadGlbModels } from "./three/glb-models";
+import { invalidateUnit } from "./three/models";
 
 export { mapAssetBase } from "./map-art";
 
@@ -52,7 +54,7 @@ export async function loadTerrainArt(
 ): Promise<TerrainArt> {
   const loader = new THREE.TextureLoader();
   if (isRandomMapId(mapId)) {
-    const [art, rock] = await Promise.all([paintTerrainArt(mapById(mapId), progress), loadRock(loader, biome)]);
+    const [art, rock] = await Promise.all([paintTerrainArt(mapById(mapId), progress), loadRock(loader, biome), loadGlbModels(invalidateUnit)]);
     return { ...art, rock };
   }
   const n = terrainChunks(mapSize);
@@ -61,6 +63,7 @@ export async function loadTerrainArt(
   const chunks: (THREE.Texture | null)[][] = [];
   let rock: THREE.Texture | null = null;
   const jobs: Promise<void>[] = [
+    loadGlbModels(invalidateUnit),
     loadRock(loader, biome).then((tex) => {
       rock = tex;
       progress?.(++done / total);

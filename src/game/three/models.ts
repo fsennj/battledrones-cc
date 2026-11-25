@@ -4,6 +4,7 @@ import { ModelBuilder, type Section, type Vec3 } from "./builder";
 import { GANTRY_STAGES, GOLIATH_RIG, gantryStage, goliathStatic } from "./goliath";
 import { botStatic, botHeight, J, squadStatic, type BotKind } from "./infantry";
 import { modelMat } from "./materials";
+import { glbUnit, recolor } from "./glb-models";
 
 /**
  * Every vehicle, aircraft, building and map objective as a procedural
@@ -1316,7 +1317,20 @@ function def(key: string, make: () => ModelDef): ModelDef {
 }
 
 export function unitDef(kind: UnitKind, f: Faction): ModelDef {
-  return def(`u/${f}/${kind}`, () => UNIT_MODELS[kind](TEAMS[f]));
+  return def(`u/${f}/${kind}`, () => {
+    const d = UNIT_MODELS[kind](TEAMS[f]);
+    const g = glbUnit(kind);
+    if (!g) return d;
+    // a Blender model replaces the hull and turret shapes; mount, muzzle and height stay as modelled in code
+    const paint = (geo: THREE.BufferGeometry) => (f === "blue" ? geo : recolor(geo, TEAMS.blue, TEAMS[f]));
+    return { ...d, hull: paint(g.hull), turret: g.turret ? paint(g.turret) : d.turret };
+  });
+}
+
+/** Drop a unit's cached models (and its scale) after its Blender model arrived. */
+export function invalidateUnit(kind: UnitKind): void {
+  for (const k of [...cache.keys()]) if (k.endsWith(`/${kind}`) && k.startsWith("u/")) cache.delete(k);
+  scales.delete(kind);
 }
 
 export function buildingDef(kind: BuildingKind, f: Faction): ModelDef {
