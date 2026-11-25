@@ -1140,6 +1140,10 @@ export class Controller {
     return out;
   }
 
+  repairSelected(): void {
+    if (this.selectedBuilding !== null) this.enqueue({ type: "repair", faction: PLAYER, buildingId: this.selectedBuilding });
+  }
+
   sellSelected(): void {
     if (this.selectedBuilding !== null)
       this.enqueue({ type: "sell", faction: PLAYER, buildingId: this.selectedBuilding });

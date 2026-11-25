@@ -1175,6 +1175,8 @@ export function createHud(api: HudApi): Hud {
       chips.push({ id: "clear", label: "✕", on: () => ctrl.clearSelection() });
     } else if (ctrl.selectedBuilding !== null && !ctrl.spectator) {
       const b = w.buildings.get(ctrl.selectedBuilding);
+      if (b && (b.hp < BUILDINGS[b.kind].hp || b.repairing))
+        chips.push({ id: "repair", label: b.repairing ? "Repairing…" : "Repair", active: !!b.repairing, on: () => ctrl.repairSelected() });
       if (b && b.kind !== "hq") {
         const refund = Math.floor(BUILDINGS[b.kind].cost * ECONOMY.sellRefund * (b.hp / BUILDINGS[b.kind].hp));
         chips.push({ id: "sell", label: `$ Sell +${refund}`, cls: "warn", on: () => ctrl.sellSelected() });

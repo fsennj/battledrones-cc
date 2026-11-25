@@ -19,6 +19,7 @@
  *     move, attackMove, harvest:     units, x, y
  *     attack:                        units, id(targetId)
  *     stop, anchor, packUp:          units
+ *     sell, repair:                  id(buildingId)
  *     produce, cancelProduce:        id(buildingId), unitKind 5
  *     startBuilding:                 buildingKind 4
  *     cancelBuilding, callWave:      –
@@ -50,7 +51,7 @@
  */
 import type { BuildingKind, Command, Faction, PowerKind, UnitKind } from "../sim/types";
 
-export const CODEC_VERSION = 2;
+export const CODEC_VERSION = 3;
 
 /** A split piece is at most this many bits, so any command fits in an empty turn. */
 export const C_MAX = 96;
@@ -62,7 +63,7 @@ const UE_MAX = 2 ** (UE_ZEROS_MAX + 1) - 2;
 
 export const COMMAND_TYPES = [
   "move", "attackMove", "attack", "harvest", "stop", "produce", "cancelProduce", "startBuilding", "cancelBuilding",
-  "placeBuilding", "sell", "rally", "callWave", "calldown", "board", "unload", "anchor", "packUp", "lift", "resign"
+  "placeBuilding", "sell", "rally", "callWave", "calldown", "board", "unload", "anchor", "packUp", "lift", "resign", "repair"
 ] as const satisfies readonly Command["type"][];
 
 export const UNIT_KINDS = [
@@ -282,7 +283,8 @@ function canonical(c: Command, ctx: CanonContext): Command | null {
       const ty = tile(c.ty, H);
       return tx !== null && ty !== null ? { type: c.type, faction, tx, ty } : null;
     }
-    case "sell": {
+    case "sell":
+    case "repair": {
       const buildingId = idOf(c.buildingId);
       return buildingId !== null ? { type: c.type, faction, buildingId } : null;
     }
@@ -425,6 +427,7 @@ export function encodeCommand(wr: BitWriter, c: Command, map: MapSize, prev: rea
       wr.bits(c.ty, bitsFor(map.height));
       return prev;
     case "sell":
+    case "repair":
       writeId(wr, c.buildingId);
       return prev;
     case "rally":
@@ -563,6 +566,7 @@ export function decodeCommand(
       return { command: { type, faction, tx, ty: readTile(rd, map.height) }, units: prev };
     }
     case "sell":
+    case "repair":
       return { command: { type, faction, buildingId: readId(rd) }, units: prev };
     case "rally": {
       const buildingId = readId(rd);

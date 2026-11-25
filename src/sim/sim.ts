@@ -5,6 +5,7 @@ import {
   tickConstruction,
   tickHarvest,
   tickProduction,
+  tickRepair,
   tickTrickle
 } from "./economy";
 import { ECONOMY, FOG } from "./balance";
@@ -34,6 +35,7 @@ export function step(w: World, commands: Command[]): void {
   tickProduction(w);
   tickHarvest(w);
   tickTrickle(w);
+  tickRepair(w);
   tickPowers(w); // calldowns land, stuns wear off (powers.ts)
   const engaged = tickCombat(w);
   tickTransport(w); // squads board Condors, Condors fly drops (transport.ts)

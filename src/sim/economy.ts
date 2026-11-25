@@ -166,6 +166,39 @@ export function sellBuilding(w: World, faction: Faction, buildingId: number): vo
   removeBuilding(w, b);
 }
 
+/** Toggles repair on one of the faction's own buildings (not while it is being built: it is in `buildings` only when finished). */
+export function toggleRepair(w: World, faction: Faction, buildingId: number): void {
+  const b = w.buildings.get(buildingId);
+  if (!b || b.faction !== faction) return;
+  if (b.repairing) b.repairing = false;
+  else if (b.hp < BUILDINGS[b.kind].hp) b.repairing = true;
+}
+
+/**
+ * Buildings marked for repair regain ECONOMY.repairRate of their max HP each second and pay
+ * ECONOMY.repairCost of their price pro rata, in whole scrap. It pauses (stays on) while the
+ * building is under fire or the side is out of scrap, and switches itself off at full HP.
+ */
+export function tickRepair(w: World): void {
+  if (w.tick % TICK_RATE !== 0) return;
+  for (const b of w.buildings.values()) {
+    if (!b.repairing) continue;
+    const stats = BUILDINGS[b.kind];
+    if (b.hp >= stats.hp) {
+      b.repairing = false;
+      continue;
+    }
+    if (w.tick - b.damagedTick < ECONOMY.repairQuiet * TICK_RATE) continue;
+    const heal = Math.min(stats.hp - b.hp, stats.hp * ECONOMY.repairRate);
+    const cost = Math.ceil(stats.cost * ECONOMY.repairCost * (heal / stats.hp));
+    const f = w.factions[b.faction];
+    if (f.scrap < cost) continue;
+    f.scrap -= cost;
+    b.hp += heal;
+    if (b.hp >= stats.hp) b.repairing = false;
+  }
+}
+
 /** What a queued unit cost (and a cancel refunds): its price when queued. */
 export const paidFor = (q: QueueItem): number => q.paid ?? UNITS[q.kind].cost;
 
@@ -634,6 +667,9 @@ export function applyEconomyCommand(w: World, c: Command): void {
       break;
     case "sell":
       sellBuilding(w, c.faction, c.buildingId);
+      break;
+    case "repair":
+      toggleRepair(w, c.faction, c.buildingId);
       break;
     case "produce":
       produceUnit(w, c.faction, c.buildingId, c.unit);

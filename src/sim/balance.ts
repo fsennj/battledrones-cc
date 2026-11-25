@@ -347,6 +347,12 @@ export const ECONOMY = {
   buildRadius: 6,
   /** Fraction of cost refunded when selling a building. */
   sellRefund: 0.5,
+  /** Repair: a building under repair regains this share of its max HP every second… */
+  repairRate: 0.04,
+  /** …for this share of its cost per full health bar (0 → max), taken from the scrap whole each second… */
+  repairCost: 0.3,
+  /** …but only while it has not been hit for this many seconds. */
+  repairQuiet: 3,
   /** Scrap per second every HQ salvages on its own (keeps broke sides alive). */
   hqTrickle: 2,
   /** Max units queued per production building. */

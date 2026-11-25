@@ -116,6 +116,8 @@ function handWritten(): Sample[] {
     for (const [tx, ty] of [[0, 0], [S - 1, S - 1], [7, S - 1]] as const) add({ type: "placeBuilding", faction: f, tx, ty }, ctx);
     add({ type: "sell", faction: f, buildingId: 0 }, ctx);
     add({ type: "sell", faction: f, buildingId: TOP }, ctx);
+    add({ type: "repair", faction: f, buildingId: 0 }, ctx);
+    add({ type: "repair", faction: f, buildingId: TOP }, ctx);
     add({ type: "board", faction: f, unitIds: [30, 31], carrierId: TOP }, ctx);
     add({ type: "unload", faction: f, unitIds: [44] }, ctx);
     add({ type: "unload", faction: f, unitIds: [44], x: 3, y: NaN }, ctx); // (no point: both must be finite)
@@ -434,9 +436,9 @@ describe("the command codec", () => {
 
   it("has complete, explicit tables", () => {
     expect(TABLES_COMPLETE).toBe(true);
-    expect(CODEC_VERSION).toBe(2);
+    expect(CODEC_VERSION).toBe(3);
     expect(new Set(COMMAND_TYPES).size).toBe(COMMAND_TYPES.length);
-    expect(COMMAND_TYPES.length).toBe(20);
+    expect(COMMAND_TYPES.length).toBe(21);
     expect(new Set(UNIT_KINDS)).toEqual(new Set(Object.keys(UNITS)));
     expect(UNIT_KINDS.length).toBe(Object.keys(UNITS).length);
     expect(new Set(BUILDING_KINDS)).toEqual(new Set(Object.keys(BUILDINGS)));

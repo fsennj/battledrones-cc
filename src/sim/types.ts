@@ -259,6 +259,8 @@ export interface Building {
    * for build range: nothing can be built off it. Decided when it is placed.
    */
   outpost?: boolean;
+  /** Being repaired for scrap (the repair command toggles it; economy.ts tickRepair). */
+  repairing?: boolean;
 }
 
 /** A building being constructed C&C-style (timer in the "sidebar"). */
@@ -845,6 +847,8 @@ export type Command =
   | { type: "cancelBuilding"; faction: Faction }
   | { type: "placeBuilding"; faction: Faction; tx: number; ty: number }
   | { type: "sell"; faction: Faction; buildingId: number }
+  /** Toggles repair of one of the faction's own buildings (economy.ts tickRepair): scrap for hit points, out of combat. */
+  | { type: "repair"; faction: Faction; buildingId: number }
   | { type: "rally"; faction: Faction; buildingId: number; x: number; y: number }
   /** Last Stand: bring the next wave in now for a scrap bonus. */
   | { type: "callWave"; faction: Faction }
