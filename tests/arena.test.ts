@@ -45,13 +45,12 @@ describe("arena observations show only what the side can see", () => {
       for (const ticks of [900, 2400]) {
         const w = aiWorld(def.id, ticks);
         for (const side of SIDES) {
-          const enemy = side === "blue" ? "red" : "blue";
           const fr = frameOf(w, side);
           const obs = observeState(w, side);
           // every enemy unit listed is one the side sees now, where it is
           for (const e of obs.enemies) {
             const u = w.units.get(e.id)!;
-            expect(u.faction).toBe(enemy);
+            expect(u.faction).not.toBe(side); // (an enemy: on a four-player map that can be green or purple too)
             expect(unitSeenBy(w, side, u)).toBe(true);
             expect([e.x, e.y]).toEqual(fr.tile(u.x, u.y));
           }

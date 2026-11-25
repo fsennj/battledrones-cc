@@ -297,7 +297,7 @@ const GUARD_RADIUS = 5;
 const STAGE_RADIUS = 6;
 /** The army (the Condor is transport, not a combat unit: ai/condor.ts flies it). */
 const COMBAT_KINDS: UnitKind[] = [
-  "stinger", "flak-crawler", "mortar", "mastodon", "lancer", "wasp", "raptor", "hornet", "mender",
+  "stinger", "flak-crawler", "mortar", "mastodon", "lancer", "wasp", "raptor", "hornet", "mender", "juggernaut",
   "trooper", "rocket-squad", "sniper"
 ];
 
@@ -609,7 +609,7 @@ export function tickAi(w: World, faction: Faction, s: AiState): Command[] {
   // a capped share of the force, the rest goes to squads, Condors and the air that holds islands)
   const vehicleCap = airlifts ? AIRLIFT.vehicles * Math.max(1000, forceValue) : Infinity;
   const vehicleValue = airlifts
-    ? (["stinger", "flak-crawler", "mortar", "mastodon", "lancer"] as const).reduce((v, k) => v + have(k) * UNITS[k].cost, 0)
+    ? (["stinger", "flak-crawler", "mortar", "mastodon", "lancer", "juggernaut"] as const).reduce((v, k) => v + have(k) * UNITS[k].cost, 0)
     : 0;
   const runFabs = () => {
     for (const fab of myBuildings.filter((b) => b.kind === "fab-plant")) {
@@ -624,6 +624,8 @@ export function tickAi(w: World, faction: Faction, s: AiState): Command[] {
       } else if (ownAA < Math.ceil(s.seenAir * 0.6)) kind = tech && r < 0.35 ? "lancer" : "flak-crawler";
       else if (tech && have("mortar") < Math.min(3, 1 + enemyDefenses) && (enemyDefenses > 0 || r < 0.2))
         kind = "mortar";
+      // a siege gun behind the line once the enemy has dug in: at most two, and only with a real army to guard them
+      else if (tech && enemyDefenses >= 2 && have("juggernaut") < 2 && army.length >= 6 && r < 0.3) kind = "juggernaut";
       else if (infantryHeavy && r < 0.65)
         // (a couple of Mortars for the splash; Stingers do the rest — Mortars die fast in a brawl)
         kind = tech && have("mortar") < Math.min(3, 1 + Math.floor(s.seenInfantry / 4)) ? "mortar" : "stinger";
