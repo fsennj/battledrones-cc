@@ -145,7 +145,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 ];
 
 const BUILDABLE: BuildingKind[] = ["fab-plant", "airpad", "assembly-bay", "tech-lab", "depot", "turret", "sam-site", "radar", "gantry"];
-const GROUND: UnitKind[] = ["harvester", "stinger", "flak-crawler", "mortar", "mastodon", "lancer", "goliath"];
+const GROUND: UnitKind[] = ["harvester", "stinger", "flak-crawler", "mortar", "mastodon", "juggernaut", "lancer", "goliath"];
 const INFANTRY: UnitKind[] = ["trooper", "rocket-squad", "sniper"];
 const AIR: UnitKind[] = ["scout", "wasp", "raptor", "hornet", "mender", "condor"];
 const UNIT_TABS: { tab: Tab; kinds: UnitKind[] }[] = [
@@ -165,6 +165,7 @@ const MATCHUPS: Partial<Record<UnitKind | BuildingKind, { strong: string; weak: 
   "flak-crawler": { strong: "All aircraft", weak: "Any ground unit" },
   mortar: { strong: "Buildings, clumped armies", weak: "Stingers up close, aircraft" },
   mastodon: { strong: "Stingers, Flak, Mortars", weak: "Rocket Squads, Lancers, Wasps" },
+  juggernaut: { strong: "Bases, Turrets, slow clumped armies from far away", weak: "Anything that closes in: Stingers, Wasps, Lancers, aircraft" },
   lancer: { strong: "Mastodons, Goliaths, Flak, Raptors; crosses water", weak: "Stinger swarms, Hornets" },
   goliath: { strong: "Ground armies and bases; a walking base itself", weak: "Rocket Squads, Wasps, Lancers, Hornets" },
   wasp: { strong: "Stingers, Mastodons, Goliaths, Mortars", weak: "Flak, Raptors, Lancers" },
