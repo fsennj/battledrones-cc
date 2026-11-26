@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#101b21">
+    <title>Riverlands VR-Tisch · Battle Drones</title>
+    <link rel="icon" href="./icons/icon-192.png">
+    <script type="module" crossorigin src="./assets/xr-CWZbktep.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/three-D9IccRJm.js">
+    <link rel="stylesheet" crossorigin href="./assets/xr-BytFo6Jk.css">
+  </head>
+  <body>
+    <main id="table-view" aria-label="Riverlands Spieltisch"></main>
+    <header class="table-header">
+      <h1 id="region-title">Riverlands</h1>
+      <p>VR-Tisch</p>
+      <div class="hud-language"><label for="xr-language">Anzeigesprache</label> <select id="xr-language"><option value="de" lang="de">Deutsch</option><option value="en" lang="en">English</option></select></div>
+      <label for="map-select">Karte</label>
+      <select id="map-select"><option value="zillertal">Zillertal</option></select>
+      <div id="town-views" hidden>
+        <label for="town-view">Nahansicht</label>
+        <select id="town-view"><option value="">Ganzer Tisch</option></select>
+      </div>
+      <div id="heeresschau" hidden>
+        <label for="heer-modell">Bundesheer-Modell</label>
+        <select id="heer-modell"></select>
+        <output aria-live="polite"></output>
+      </div>
+      <div id="train-views" hidden><label for="train-camera">Zugsicht</label>
+        <select id="train-camera" title="In VR mit einem Druck auf den rechten Stick wechseln"><option value="fuehrerstand">Führerstand</option><option value="links">Seitenfenster links</option><option value="rechts">Seitenfenster rechts</option><option value="tisch">Tischansicht</option></select>
+      </div>
+      <a id="tirol-weather" class="map-data weather" href="https://data.hub.geosphere.at/dataset/tawes-v1-10min" target="_blank" rel="noopener" hidden></a>
+      <details id="atlas-board" class="map-data" hidden>
+        <summary>ÖBB-Abfahrten</summary>
+        <label for="atlas-board-station">Bahnhof</label> <select id="atlas-board-station"></select>
+        <label for="atlas-board-class">Zug</label> <select id="atlas-board-class">
+          <option value="">Alle</option><option value="RJ">Railjet / RJX</option><option value="REX">REX</option><option value="S ">S-Bahn</option>
+        </select>
+        <label class="woergl-day">Verkehrstag <input type="date"></label>
+        <label class="woergl-runs">Railjet am Bahnhof <select aria-label="Railjet des Tages"></select></label>
+        <label class="corridor-only"><input type="checkbox"> Nur Fahrten über Innsbruck, Wörgl und Kufstein</label>
+        <button type="button" class="railjet-division" hidden>Zugteilung in Innsbruck ansehen</button>
+        <p class="buchs-notice" hidden></p>
+        <p class="station-report" hidden></p>
+        <section class="formation-detail" aria-label="Wagenreihung je Halt" hidden></section>
+        <p class="service-clock"></p><div class="departures"></div>
+        <details class="service-stops" hidden><summary>Halte der Vorschaufahrt</summary><ol></ol></details>
+        <button type="button" class="live-clock" hidden>Zur aktuellen Uhrzeit</button>
+        <p>Sollfahrplan · <a href="https://data.oebb.at/de/datensaetze~soll-fahrplan-gtfs~" target="_blank" rel="noopener">ÖBB, CC BY 4.0</a> · <a href="https://live.oebb.at/" target="_blank" rel="noopener">Wagenreihung · ÖBB Live</a> · <a class="station-monitor-link" href="https://meine.oebb.at/abfahrtankunft/departure?plc=8101170" target="_blank" rel="noopener">ÖBB-Bahnhofsmonitor Wörgl</a> · Gleiszuordnung © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-Mitwirkende</a> · Relief bis Zürich · <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">Mapzen Terrain Tiles und Höhendatenquellen</a></p>
+      </details>
+    </header>
+    <aside id="mission-panel" class="mission" aria-label="Missionsbriefing" hidden>
+      <h2></h2>
+      <p id="mission-summary"></p>
+      <ol></ol>
+      <p id="mission-status" role="status"></p>
+      <button type="button" id="city-flight" hidden>Eurofighter starten</button>
+      <button type="button" id="city-replay" hidden>Gefecht neu starten</button>
+      <a id="terrain-source" target="_blank" rel="noopener"></a>
+      <p id="atlas-legend" hidden>Linien des Landes Tirol ·
+        <a href="https://www.arcgis.com/home/item.html?id=a3b8885df1d44c45bd7c1afe87cfecaa" target="_blank" rel="noopener">Ortsstraßen und Wege</a> ·
+        <a href="https://gis.tirol.gv.at/arcgis/rest/services/Service_Public/ogd_wasser/MapServer/63" target="_blank" rel="noopener">Gewässer</a> ·
+        <a href="https://gis.tirol.gv.at/arcgis/rest/services/Service_Public/ogd_infrastruktur/MapServer/32" target="_blank" rel="noopener">L3, A12, A13, S16</a> ·
+        <a href="https://gis.tirol.gv.at/arcgis/rest/services/Service_Public/ogd_infrastruktur/MapServer/55" target="_blank" rel="noopener">Bahnnetz</a> ·
+        <a href="https://gis.tirol.gv.at/arcgis/rest/services/Service_Public/ogd_infrastruktur/MapServer/48" target="_blank" rel="noopener">Bauwerke</a> ·
+        <a href="https://www.data.gv.at/datasets/35691b6c-9ed7-4517-b4b3-688b0569729a" target="_blank" rel="noopener">Orthofoto Tirol</a> ·
+        <a href="https://doi.org/10.5281/zenodo.7254221" target="_blank" rel="noopener">ESA WorldCover 2021</a> (CC BY 4.0)</p>
+      <p id="roof-credit" hidden>Dachflächen stilisiert · Datenquelle: Land Tirol - data.tirol.gv.at ·
+        <a href="https://www.data.gv.at/datasets/ac74b38e-57cd-4c8c-8fea-c397da185fcf" target="_blank" rel="noopener">Gebäude Tirol</a> ·
+        <a href="https://gis.tirol.gv.at/arcgis/rest/services/Service_Public/terrain/MapServer" target="_blank" rel="noopener">Gelände- und Oberflächenmodell</a> ·
+        <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
+      <p id="transport-credit" hidden>Straßen, Wege, Brücken und Tunnel · Datenquelle: Land Tirol - data.tirol.gv.at ·
+        <a href="https://www.arcgis.com/home/item.html?id=a3b8885df1d44c45bd7c1afe87cfecaa" target="_blank" rel="noopener">GIP-Verkehrswege</a> ·
+        <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
+    </aside>
+    <section class="controls" aria-label="Steuerung">
+      <div id="yard-drive" class="instructions" hidden>
+        <label for="yard-vehicle">Fahrt in die Wildschönau</label>
+        <select id="yard-vehicle"><option value="">Fahrzeug wählen</option></select>
+        <p>Freie Fahrt vom Bauhof über die L3 in die Wildschönau.</p>
+        <div class="yard-pedals" hidden>
+          <button type="button" data-axis="steer" value="-1" aria-label="Links lenken">←</button>
+          <button type="button" data-axis="steer" value="1" aria-label="Rechts lenken">→</button>
+          <button type="button" data-axis="pedal" value="-1">Rückwärts</button>
+          <button type="button" data-axis="pedal" value="1">Vorwärts</button>
+          <label><input type="checkbox" id="yard-guide"> L3-Strecke folgen</label>
+        </div>
+        <output hidden></output>
+        <p>W/S fährt vor und zurück, A/D lenkt. Auch mit Pfeiltasten oder VR-Stick. Zum Bremsen Gas loslassen. Q/R dreht die Karte, das Mausrad zoomt. In VR wechselt A/X den Wagen.</p>
+      </div>
+      <div class="instructions">
+        <p id="order-status" role="status">Spielfeld wird geladen …</p>
+        <p>Blaue Einheit wählen, dann das Ziel auf dem Spielfeld antippen.</p>
+        <p>Tirol-Karten mit Q/R drehen, mit dem Mausrad zoomen und mit Rechtsziehen verschieben. Zwei Finger oder beide VR-Griffe drehen und skalieren den Tisch.</p>
+      </div>
+      <div class="vr">
+        <div class="voice-controls" role="group" aria-label="Stimmen">
+          <label for="voice-locale">Stimmsprache</label>
+          <select id="voice-locale">
+            <option value="de-AT">Tirolerisch</option>
+            <option value="gsw-CH">Schweizerdeutsch</option>
+            <option value="it-IT">Italiano</option>
+          </select>
+          <button id="mute-voice" type="button" aria-pressed="false">Stimmen stummschalten</button>
+        </div>
+        <button id="mute-audio" type="button" aria-label="Ton stummschalten" aria-pressed="false">Ton an</button>
+        <button id="enter-vr" type="button" disabled>VR starten</button>
+        <p id="vr-status" aria-live="polite"></p>
+      </div>
+    </section>
+  </body>
+</html>

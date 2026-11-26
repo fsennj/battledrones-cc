@@ -1,0 +1,2 @@
+assets/*.js -text -diff linguist-generated=true
+assets/*.css -text -diff linguist-generated=true
