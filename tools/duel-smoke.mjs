@@ -343,6 +343,8 @@ const text = (p, sel) => p.page.evaluate((q) => document.querySelector(q)?.inner
 
 /** The Duel button on the menu, once its chunk is in (Skirmish tab). */
 async function tapDuel(p) {
+  const closed = p.page.locator("#more-options-toggle[aria-expanded=false]");
+  if (await closed.count()) await closed.tap();
   await p.page.waitForSelector("#play-duel:not([disabled])", { timeout: 30000 });
   await p.page.locator("#play-duel").tap();
   await p.page.waitForSelector(".duelsheet", { timeout: 10000 });

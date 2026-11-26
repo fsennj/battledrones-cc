@@ -32,6 +32,7 @@ await page.waitForTimeout(600);
 await page.screenshot({ path: `${out}/menu-${tag}.png` });
 
 const spectate = process.env.SPECTATE === "1";
+if (spectate) await page.click("#more-options-toggle");
 await page.click(spectate ? "#play-spectate" : "#play");
 if (!spectate) {
   // pick an opener (OPENER=blitz|industry|airwing, default the first card)

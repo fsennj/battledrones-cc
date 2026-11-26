@@ -35,6 +35,7 @@ try {
   page.on("pageerror", (e) => errors.push(String(e)));
   if (paste) {
     await page.goto(`http://localhost:${port}/`, { waitUntil: "networkidle" });
+    await page.click("#more-options-toggle");
     await page.click("#play-replay");
     await page.fill("#replay-json", readFileSync(file, "utf8"));
     await page.click("#replay-go");

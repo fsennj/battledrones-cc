@@ -321,92 +321,105 @@ function showMenu(linkedMap?: string | null): void {
         <p class="sub" id="sub"></p>
       </header>
       <main class="menu-inner" aria-labelledby="menu-heading">
-        <h2 id="menu-heading">Match setup</h2>
-        <div class="seg modes" id="gmode" role="group" aria-label="Game mode">
-          <button data-m="skirmish">Skirmish</button>
-          <button data-m="survival">Last Stand</button>
-          <button data-m="ops">Ops</button>
+        <h2 id="menu-heading"></h2>
+        <p id="menu-selection" class="menu-selection"></p>
+        <button class="cta big" id="play">Play</button>
+        <div class="menu-links">
+          <button type="button" id="match-settings-toggle" aria-controls="match-settings" aria-expanded="false">Change match</button>
+          <button type="button" id="more-options-toggle" aria-controls="more-options" aria-expanded="false">More options</button>
         </div>
-        <p class="lsbest" id="lsbest" hidden></p>
-        <h3 class="menu-label" id="menu-field-label">Battlefield</h3>
-        <p class="lsbest opsum" id="opsum" hidden></p>
-        <div class="maps opcards" id="opcards" role="group" aria-labelledby="menu-field-label" hidden></div>
-        <p class="blurb opblurb" id="opblurb" hidden></p>
-        <div class="maps" id="maps" role="group" aria-labelledby="menu-field-label">
-          ${MAPS.map(
-            (m) => `
-            <button class="mapcard" data-id="${m.id}">
-              <img src="${mapThumbUrl(m.id)}" alt="" draggable="false" />
-              <span class="mn">${m.name}</span>
-              <span class="mb">${m.size}×${m.size} · ${m.players === 4 ? "4 players" : m.biome}</span>
+        <section id="match-settings" class="menu-section" aria-label="Match settings" hidden>
+          <div class="seg modes" id="gmode" role="group" aria-label="Game mode">
+            <button data-m="skirmish">Skirmish</button>
+            <button data-m="survival">Last Stand</button>
+            <button data-m="ops">Ops</button>
+          </div>
+          <p class="lsbest" id="lsbest" hidden></p>
+          <h3 class="menu-label" id="menu-field-label">Battlefield</h3>
+          <p class="lsbest opsum" id="opsum" hidden></p>
+          <div class="maps opcards" id="opcards" role="group" aria-labelledby="menu-field-label" hidden></div>
+          <p class="blurb opblurb" id="opblurb" hidden></p>
+          <div class="maps" id="maps" role="group" aria-labelledby="menu-field-label">
+            ${MAPS.map(
+              (m) => `
+              <button class="mapcard" data-id="${m.id}">
+                <img src="${mapThumbUrl(m.id)}" alt="" draggable="false" />
+                <span class="mn">${m.name}</span>
+                <span class="mb">${m.size}×${m.size} · ${m.players === 4 ? "4 players" : m.biome}</span>
+                <span class="mbest" hidden></span>
+                <span class="mstars" hidden></span>
+              </button>`
+            ).join("")}
+            <button class="mapcard rndcard" data-id="${randomId}" id="rndcard">
+              <img src="" alt="" draggable="false" />
+              <span class="mfog" aria-hidden="true"><b>?</b></span>
+              <span class="mzoom" aria-hidden="true"><i>🔍</i></span>
+              <span class="mn"></span>
+              <span class="mb"></span>
               <span class="mbest" hidden></span>
               <span class="mstars" hidden></span>
-            </button>`
-          ).join("")}
-          <button class="mapcard rndcard" data-id="${randomId}" id="rndcard">
-            <img src="" alt="" draggable="false" />
-            <span class="mfog" aria-hidden="true"><b>?</b></span>
-            <span class="mzoom" aria-hidden="true"><i>🔍</i></span>
-            <span class="mn"></span>
-            <span class="mb"></span>
-            <span class="mbest" hidden></span>
-            <span class="mstars" hidden></span>
-            <span class="mrnd">🎲 Random</span>
-          </button>
-        </div>
-        <div class="rndpanel" id="rndpanel" hidden>
-          <div class="seg rndbiome" id="rndbiome">
-            <button data-b="" title="Rerolls pick any biome">🎲 Any</button>
-            ${BIOMES.map((b) => `<button data-b="${b}" title="${cap(b)}">${BIOME_ICON[b]}<span> ${cap(b)}</span></button>`).join("")}
+              <span class="mrnd">🎲 Random</span>
+            </button>
           </div>
-          <div class="rndrow">
-            <label class="rndseed" title="Seed: type or paste a code to grow that map">#<input id="rndseed" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" /></label>
-            <button class="cta alt" id="rndroll">🎲 Reroll</button>
-            <button class="cta alt" id="rndcopy">🔗 Copy link</button>
-          </div>
-          <p class="rndhint"><b>Before you play</b> <span id="rndhint"></span></p>
-          <div class="rndrow">
-            <div class="seg rndview" id="rndview" role="radiogroup" aria-label="Before you play">
-              <button data-u="0" role="radio" title="See the whole map before the match">👁️ Preview</button>
-              <button data-u="1" role="radio" title="The map stays black until you scout it">🌫️ Uncharted</button>
+          <div class="rndpanel" id="rndpanel" hidden>
+            <div class="seg rndbiome" id="rndbiome">
+              <button data-b="" title="Rerolls pick any biome">🎲 Any</button>
+              ${BIOMES.map((b) => `<button data-b="${b}" title="${cap(b)}">${BIOME_ICON[b]}<span> ${cap(b)}</span></button>`).join("")}
             </div>
-            <button class="cta alt" id="rndfull">🔍 View<span class="wide"> full</span> map</button>
+            <div class="rndrow">
+              <label class="rndseed" title="Seed: type or paste a code to grow that map">#<input id="rndseed" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" /></label>
+              <button class="cta alt" id="rndroll">🎲 Reroll</button>
+              <button class="cta alt" id="rndcopy">🔗 Copy link</button>
+            </div>
+            <p class="rndhint"><b>Before you play</b> <span id="rndhint"></span></p>
+            <div class="rndrow">
+              <div class="seg rndview" id="rndview" role="radiogroup" aria-label="Before you play">
+                <button data-u="0" role="radio" title="See the whole map before the match">👁️ Preview</button>
+                <button data-u="1" role="radio" title="The map stays black until you scout it">🌫️ Uncharted</button>
+              </div>
+              <button class="cta alt" id="rndfull">🔍 View<span class="wide"> full</span> map</button>
+            </div>
+            <div class="rndrecent" id="rndrecent"></div>
           </div>
-          <div class="rndrecent" id="rndrecent"></div>
-        </div>
-        <p class="blurb" id="blurb"></p>
-        <div class="menu-difficulty" id="menu-difficulty">
-          <h3 class="menu-label" id="menu-difficulty-label">Difficulty</h3>
-          <div class="seg" id="diff" role="group" aria-labelledby="menu-difficulty-label">
-            ${diffs.map((d) => `<button data-d="${d}">${DIFFICULTY[d].label}</button>`).join("")}
+          <p class="blurb" id="blurb"></p>
+          <div class="menu-difficulty" id="menu-difficulty">
+            <h3 class="menu-label" id="menu-difficulty-label">Difficulty</h3>
+            <div class="seg" id="diff" role="group" aria-labelledby="menu-difficulty-label">
+              ${diffs.map((d) => `<button data-d="${d}">${DIFFICULTY[d].label}</button>`).join("")}
+            </div>
           </div>
-        </div>
-        <button class="mutbtn"></button>
-        <button class="cta big" id="play">Play</button>
-        <div class="row" id="duelrow" hidden>
-          <button class="cta alt" id="play-online" disabled>Duel a friend online</button>
-          <button class="cta alt" id="play-duel" disabled hidden>Sound duel</button>
-        </div>
-        <div class="row">
-          <button class="cta alt" id="play-spectate">Watch AI vs AI</button>
-          <button class="cta alt" id="play-replay">Replays</button>
-          <button class="cta alt" id="howto">How to play</button>
-        </div>
+          <button class="mutbtn"></button>
+        </section>
+        <section id="more-options" class="menu-section" aria-label="More options" hidden>
+          <div class="row" id="duelrow" hidden>
+            <button class="cta alt" id="play-online" disabled>Duel a friend online</button>
+            <button class="cta alt" id="play-duel" disabled hidden>Sound duel</button>
+          </div>
+          <div class="row">
+            <button class="cta alt" id="play-spectate">Watch AI vs AI</button>
+            <button class="cta alt" id="play-replay">Replays</button>
+            <button class="cta alt" id="howto">How to play</button>
+          </div>
+          <a class="menu-art-link" href="art-comparison/">
+            <img src="${mapThumbUrl("riverlands")}" width="68" height="48" alt="" />
+            <span><strong>Before &amp; after</strong><small>Maps and buildings</small></span>
+            <span class="menu-art-arrow" aria-hidden="true">›</span>
+          </a>
+          <div class="menu-side" id="menuside">
+            <button class="rankbadge" id="rankbadge"></button>
+            <div class="dailyop" id="dailyop"></div>
+          </div>
+        </section>
       </main>
-      <aside class="menu-meta" aria-label="Career and artwork">
-        <a class="menu-art-link" href="art-comparison/">
-          <img src="${mapThumbUrl("riverlands")}" width="68" height="48" alt="" />
-          <span><strong>Before &amp; after</strong><small>Maps and buildings</small></span>
-          <span class="menu-art-arrow" aria-hidden="true">›</span>
-        </a>
-        <div class="menu-side" id="menuside">
-          <button class="rankbadge" id="rankbadge"></button>
-          <div class="dailyop" id="dailyop"></div>
-        </div>
-      </aside>
     </div>
   `;
   hud.appendChild(menu);
+  const matchSettings = menu.querySelector<HTMLElement>("#match-settings")!;
+  const moreOptions = menu.querySelector<HTMLElement>("#more-options")!;
+  const settingsToggle = menu.querySelector<HTMLButtonElement>("#match-settings-toggle")!;
+  const moreToggle = menu.querySelector<HTMLButtonElement>("#more-options-toggle")!;
+  const menuLinks = menu.querySelector<HTMLElement>(".menu-links")!;
+  const play = menu.querySelector<HTMLButtonElement>("#play")!;
   // Document-relative URLs keep the cover artwork working in versioned builds.
   const art = menu.querySelector<HTMLElement>(".keyart")!;
   const showCover = (mapId: string) => {
@@ -467,7 +480,10 @@ function showMenu(linkedMap?: string | null): void {
   // career: rank badge, Daily Op card, mutator picker, map stars (ui/career.ts)
   const career = mountMenuCareer(menu, {
     playDaily: (op) => void begin(false, () => startDaily(op)),
-    changed: () => saveSettings()
+    changed: () => {
+      saveSettings();
+      sync();
+    }
   });
   // Ops: op cards, progress line and the briefing sheet (ui/ops.ts)
   const ops = mountMenuOps(menu, {
@@ -570,7 +586,7 @@ function showMenu(linkedMap?: string | null): void {
     // bring the picked map into view when the row first shows (or shows again)
     const pick = menu.querySelector<HTMLElement>(`#maps .mapcard[data-id="${shown}"]`);
     const key = opsMode ? "" : `${gameMode.mode}:${shown}`;
-    if (key && key !== revealed && pick) {
+    if (!matchSettings.hidden && key && key !== revealed && pick) {
       const smooth = revealed !== ""; // (opening the menu: already centred, no slide)
       requestAnimationFrame(() => mapRow.reveal(pick, smooth));
       revealed = key;
@@ -612,16 +628,37 @@ function showMenu(linkedMap?: string | null): void {
     }
     const sel = ops.selected();
     showCover(opsMode ? sel.map : shown);
-    const play = menu.querySelector<HTMLButtonElement>("#play")!;
     const locked = opsMode && ops.locked(sel);
+    menu.querySelector("#menu-heading")!.textContent = opsMode ? "Ops" : survival ? "Last Stand" : "Skirmish";
+    const mapLabel = blind ? "Uncharted" : m.name;
+    const rules = gameMode.mode === "skirmish" && activeMutators().length > 0 ? " · Mutators on" : "";
+    menu.querySelector("#menu-selection")!.textContent = opsMode
+      ? locked ? `${sel.title} · Locked` : mapById(sel.map).name
+      : `${mapLabel} · ${DIFFICULTY[gameMode.difficulty].label}${rules}`;
     play.textContent = opsMode
       ? locked ? "Mission locked" : `Play ${sel.title}`
-      : survival ? "Start Last Stand" : `Play ${blind ? "Uncharted" : m.name}`;
+      : survival ? "Start Last Stand" : `Play ${mapLabel}`;
     play.classList.toggle("locked", locked);
     play.setAttribute("aria-disabled", String(locked));
     menu.querySelector("#play-spectate")!.textContent = survival ? "Watch AI defend" : "Watch AI vs AI";
   };
   sync();
+  const showSection = (section: HTMLElement | null) => {
+    matchSettings.hidden = section !== matchSettings;
+    moreOptions.hidden = section !== moreOptions;
+    settingsToggle.setAttribute("aria-expanded", String(!matchSettings.hidden));
+    moreToggle.setAttribute("aria-expanded", String(!moreOptions.hidden));
+    if (section === matchSettings) {
+      matchSettings.appendChild(play);
+      revealed = "";
+      sync();
+    } else {
+      menuLinks.before(play);
+    }
+  };
+  settingsToggle.addEventListener("click", () => showSection(matchSettings.hidden ? matchSettings : null));
+  moreToggle.addEventListener("click", () => showSection(moreOptions.hidden ? moreOptions : null));
+  if (gameMode.mode === "ops" && ops.locked(ops.selected())) showSection(matchSettings);
   menu.querySelectorAll<HTMLElement>("#maps .mapcard").forEach((el) =>
     el.addEventListener("click", () => {
       // a second tap on the picked 🎲 card opens the full-map preview

@@ -22,6 +22,7 @@ await page.evaluate(
   process.env.MAP ?? "dune-sea"
 );
 await page.reload({ waitUntil: "networkidle" });
+await page.click("#more-options-toggle");
 await page.click("#play-spectate");
 await page.waitForFunction(() => window.__bd?.world?.tick > 2, null, { timeout: 30000 });
 await page.waitForTimeout(1500);

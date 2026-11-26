@@ -159,6 +159,7 @@ async function resign(p, side) {
 
 log("1. the lobby");
 await host.page.goto(BASE, { waitUntil: "networkidle" });
+await host.page.locator("#more-options-toggle").tap();
 await host.page.waitForSelector("#play-online:not([disabled])", { timeout: 30000 });
 check(/up to 4/.test(await text(host, "#play-online")), `the online button on Compass Rose: "${await text(host, "#play-online")}"`);
 await tap(host, "#play-online");

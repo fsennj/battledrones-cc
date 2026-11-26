@@ -1187,19 +1187,14 @@ button {
     max(24px, env(safe-area-inset-bottom)) max(clamp(20px, 4vw, 64px), env(safe-area-inset-left));
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, min(500px, 58%));
-  grid-template-rows: minmax(0, 1fr) auto;
-  grid-template-areas: "brand setup" "meta setup";
+  align-content: center;
+  align-items: center;
   gap: 28px clamp(28px, 6vw, 104px);
 }
 .menu-brand {
-  grid-area: brand;
-  align-self: end;
   min-width: 0;
-  padding-bottom: clamp(32px, 8vh, 96px);
 }
 .menu-inner {
-  grid-area: setup;
-  align-self: center;
   min-width: 0;
   padding: clamp(16px, 2vw, 28px);
   display: flex;
@@ -1214,6 +1209,40 @@ button {
   font-size: 28px;
   line-height: 1;
 }
+.menu-selection {
+  margin: -3px 0 5px;
+  color: var(--dim);
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.menu-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.menu-links button {
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+}
+.menu-links button:hover,
+.menu-links button[aria-expanded="true"] {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.menu-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
 .menu-label {
   margin: 3px 0 -4px;
   color: var(--text);
@@ -1223,14 +1252,6 @@ button {
 .menu-difficulty {
   display: grid;
   gap: 8px;
-}
-.menu-meta {
-  grid-area: meta;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
-  width: min(100%, 380px);
-  align-self: end;
 }
 .menu-art-link {
   min-height: 58px;
@@ -1448,8 +1469,6 @@ button {
   .menu-shell {
     max-width: 540px;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto;
-    grid-template-areas: "brand" "setup" "meta";
     align-content: start;
     gap: 14px;
     padding-inline: max(14px, env(safe-area-inset-left)) max(14px, env(safe-area-inset-right));
@@ -1459,20 +1478,6 @@ button {
   .logo span { display: inline; }
   .sub { margin-top: 4px; }
   .menu-inner > h2 { font-size: 24px; }
-  .menu-meta { width: auto; }
-}
-@media (orientation: portrait) {
-  .menu:not(.has-update) .menu-art-link {
-    position: absolute;
-    top: max(10px, env(safe-area-inset-top));
-    right: max(14px, env(safe-area-inset-right));
-    min-height: 44px;
-    gap: 8px;
-    padding: 5px 9px 5px 5px;
-  }
-  .menu:not(.has-update) .menu-art-link img { width: 36px; height: 30px; }
-  .menu:not(.has-update) .menu-art-link strong { font-size: 15px; }
-  .menu:not(.has-update) .menu-art-link small { display: none; }
 }
 @media (orientation: portrait) and (max-height: 760px) {
   .menu-shell { padding-top: max(64px, env(safe-area-inset-top)); gap: 10px; }
@@ -1482,23 +1487,16 @@ button {
   .menu .mutbtn { min-height: 36px; }
 }
 @media (orientation: portrait) and (max-height: 650px) {
-  .menu-brand .sub, .menu-inner > h2 { display: none; }
+  .menu-brand .sub { display: none; }
 }
 @media (orientation: landscape) and (max-height: 500px) {
   .menu-shell { column-gap: 20px; padding-top: max(56px, env(safe-area-inset-top)); }
-  .menu-brand { padding-bottom: 0; }
   .logo { font-size: clamp(38px, 6.9vw, 65px); }
   .menu-inner {
-    display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
     gap: 6px;
     padding: 12px;
   }
-  .menu-inner > * { grid-column: 1 / -1; }
-  .menu-inner > h2, .menu-difficulty > .menu-label { display: none; }
-  .menu-inner > #gmode { grid-area: 1 / 1 / 2 / 2; }
-  .menu-inner > .menu-difficulty { grid-area: 1 / 2 / 2 / 3; }
-  .menu-inner:has(> .menu-difficulty[hidden]) > #gmode { grid-column: 1 / -1; }
+  .menu-inner > h2 { font-size: 24px; }
   .sub { margin-top: 10px; }
   .mapcard {
     flex-basis: 80px;

@@ -86,6 +86,8 @@ Environment variables:
 Fork builds can set `VITE_BATTLEDRONES_RELAY_URL` when running `npm run build`
 at the repo root. Use the TLS WebSocket URL of the fork's relay for an HTTPS
 game. The same endpoint serves online duels and four-player battles.
+If the endpoint has a prefix such as `/relay`, strip that prefix in the
+reverse proxy so the server still sees `/<room>/<seat>` and `/health`.
 
 ## Run it locally
 

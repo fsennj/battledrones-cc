@@ -58,6 +58,7 @@ for (const latency of [600, 1500]) {
   page.on("pageerror", (e) => errors.push(String(e)));
   const at = `latency ${latency} ms`;
   await page.goto(new URL(`?duel=loop&latency=${latency}`, base).href, { waitUntil: "networkidle" });
+  await page.locator("#more-options-toggle").tap();
   await page.waitForSelector("#play-duel:not([disabled])", { timeout: 30000 });
   await page.locator("#play-duel").tap();
   await page.locator(".duel-role[data-act=host]").tap();

@@ -158,6 +158,7 @@ async function goTo(what, to) {
 
 log("1. invite and join");
 await host.page.goto(BASE, { waitUntil: "networkidle" });
+await host.page.locator("#more-options-toggle").tap();
 await host.page.waitForSelector("#play-online:not([disabled])", { timeout: 30000 });
 await host.page.locator("#play-online").tap();
 await host.page.waitForSelector(".duel-invite-url", { timeout: 30000 });

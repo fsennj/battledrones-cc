@@ -219,6 +219,7 @@ for (const [w, h] of SIZES) {
     for (const p of await page.evaluate(inspect)) problems.push(`${at} ${step}: ${p}`);
   };
   await page.goto(url, { waitUntil: "networkidle" });
+  await page.locator("#more-options-toggle").tap();
   await page.waitForSelector("#play-duel:not([disabled])", { timeout: 30000 });
   await page.locator("#play-duel").tap();
   await page.waitForSelector(".duel-role[data-act=host]", { timeout: 10000 });

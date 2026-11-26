@@ -99,8 +99,8 @@ const override = () => page.evaluate(() => sessionStorage.getItem("__audioSessio
 
 // 1. the menu, Duel, Host, and the player's own reload with the lobby open
 await page.goto(base, { waitUntil: "networkidle" });
+await page.locator("#more-options-toggle").tap(); // (the first touch: the game's context)
 await page.waitForSelector("#play-duel:not([disabled])", { timeout: 30000 });
-await page.locator("#howto").tap(); // (the first touch: the game's context)
 await page.locator("#play-duel").tap();
 await page.waitForSelector(".duel-role[data-act=host]", { timeout: 10000 });
 await page.locator(".duel-role[data-act=host]").tap();
@@ -108,8 +108,8 @@ await page.waitForSelector(".duel-meter", { timeout: 10000 });
 expectLog("menu, Duel, Host", ["new context under auto", "type = play-and-record"]);
 if ((await override()) !== "play-and-record") problems.push("the lobby isn't in play-and-record");
 await page.reload({ waitUntil: "networkidle" });
+await page.locator("#more-options-toggle").tap();
 await page.waitForSelector("#play-duel:not([disabled])", { timeout: 30000 });
-await page.locator("#howto").tap();
 await page.waitForTimeout(300);
 const after = expectLog("reload with the lobby open, then a touch", ["type = auto", "new context under auto"]);
 // (the lobby's pagehide put it back as the page went, and the boot did before any context)
