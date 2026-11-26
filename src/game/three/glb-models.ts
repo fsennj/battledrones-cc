@@ -24,11 +24,11 @@ export interface GlbParts {
 }
 
 const GLB_UNITS: Partial<Record<UnitKind, string>> = Object.fromEntries(
-  (["juggernaut", "stinger", "mastodon", "lancer", "harvester", "condor", "wasp", "raptor"] as UnitKind[]).map((k) => [k, `assets/models/${k}.glb`])
+  (["juggernaut", "stinger", "mastodon", "lancer", "harvester", "condor", "wasp", "raptor", "scout", "flak-crawler", "mortar", "mender", "hornet"] as UnitKind[]).map((k) => [k, `assets/models/${k}.glb`])
 );
 /** Buildings with Blender geometry, including separately animated turret or radar heads. */
 const GLB_BUILDINGS: Partial<Record<BuildingKind, string>> = Object.fromEntries(
-  (["hq", "fab-plant", "depot", "airpad", "radar"] as BuildingKind[]).map((k) => [k, `assets/models/${k}.glb`])
+  (["hq", "fab-plant", "depot", "airpad", "radar", "sam-site", "turret"] as BuildingKind[]).map((k) => [k, `assets/models/${k}.glb`])
 );
 const loaded = new Map<UnitKind | BuildingKind, GlbParts>();
 
