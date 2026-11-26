@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10151c">
+  <link rel="icon" href="../icons/icon-192.png" type="image/png">
+  <title>Battle Drones — Before and after</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      background: #10151c;
+      color: #f0f4f8;
+      font: 1rem/1.5 system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { max-width: 82rem; margin: auto; padding: clamp(1rem, 4vw, 3rem); }
+    h1 { margin: .5rem 0 1rem; font-size: clamp(2rem, 5vw, 3.3rem); line-height: 1.1; }
+    h2 { margin: 0 0 1rem; font-size: 1.5rem; }
+    a { color: #b5d5fa; }
+    a:focus-visible { outline: 3px solid #c2e0ff; outline-offset: 4px; }
+    nav { display: flex; flex-wrap: wrap; gap: .55rem 1rem; }
+    nav a { border: 1px solid #3d5065; border-radius: .45rem; padding: .28rem .65rem; text-decoration: none; }
+    nav a:hover { background: #1e3146; }
+    section { margin-top: 2.6rem; scroll-margin-top: 1rem; }
+    figure { margin: 0; min-width: 0; }
+    figcaption { padding-bottom: .4rem; color: #d0d9e4; }
+    .full { display: block; border: 1px solid #3d5065; border-radius: .5rem; overflow: hidden; }
+    .full:hover { border-color: #b5d5fa; }
+    img { display: block; width: 100%; height: auto; }
+    .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+    .play { color: #d0d9e4; }
+    .help { margin: 0 0 1.2rem; color: #c1cbd7; }
+    @media (max-width: 42rem) { .pair { grid-template-columns: minmax(0, 1fr); } }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="play" href="../">← Play Battle Drones</a>
+    <h1>Battle Drones before and after</h1>
+    <p class="help">Click any image to open it at full size.</p>
+    <nav aria-label="Comparisons">
+      <a href="#buildings">Core buildings</a>
+      <a href="#defences">Defences and assembly</a>
+      <a href="#archipelago">Archipelago</a>
+      <a href="#riverlands">Riverlands</a>
+    </nav>
+  </header>
+  <main>
+    <section id="buildings">
+      <h2>Core buildings</h2>
+      <a class="full" href="core-buildings.png">
+        <img src="core-buildings.png" width="1200" height="549" alt="HQ, Fab Plant, Airpad, Tech Lab and Depot. Original models in the top row and redesigned models below.">
+      </a>
+    </section>
+    <section id="defences">
+      <h2>Defences and assembly buildings</h2>
+      <a class="full" href="defences-and-assembly.png">
+        <img src="defences-and-assembly.png" width="1200" height="549" loading="lazy" alt="Radar, SAM Site, Turret, Assembly Bay and Gantry. Original models in the top row and redesigned models below.">
+      </a>
+    </section>
+    <section id="archipelago">
+      <h2>Archipelago</h2>
+      <div class="pair">
+        <figure>
+          <figcaption>Before</figcaption>
+          <a class="full" href="archipelago-before.png"><img src="archipelago-before.png" width="1440" height="900" loading="lazy" alt="Archipelago before the visual overhaul."></a>
+        </figure>
+        <figure>
+          <figcaption>After</figcaption>
+          <a class="full" href="archipelago-after.png"><img src="archipelago-after.png" width="1280" height="800" loading="lazy" alt="Archipelago after the overhaul, with rebuilt timber bridges and brighter shorelines."></a>
+        </figure>
+      </div>
+    </section>
+    <section id="riverlands">
+      <h2>Riverlands</h2>
+      <div class="pair">
+        <figure>
+          <figcaption>Before</figcaption>
+          <a class="full" href="riverlands-before.png"><img src="riverlands-before.png" width="1440" height="900" loading="lazy" alt="Riverlands before the visual overhaul."></a>
+        </figure>
+        <figure>
+          <figcaption>After</figcaption>
+          <a class="full" href="riverlands-after.png"><img src="riverlands-after.png" width="1280" height="800" loading="lazy" alt="Riverlands after the overhaul, with a more detailed river, banks and woodland."></a>
+        </figure>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

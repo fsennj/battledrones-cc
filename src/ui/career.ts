@@ -100,7 +100,7 @@ function rankBadgeHtml(c: CareerData): string {
   const xpLine = r.next === null ? `${fmt(c.xp)} XP · top rank` : `${fmt(c.xp)} / ${fmt(r.next)} XP`;
   return `${insigniaSvg(r.index)}
     <span class="rb-t"><b>${r.name}</b><span class="rb-xp">${xpLine}</span></span>
-    <span class="rb-medals" title="Medals earned">🏅 ${medals}/${MEDAL_IDS.length}</span>
+    <span class="rb-medals" title="Medals earned">${medals}/${MEDAL_IDS.length} medals</span>
     <span class="rb-bar"><i style="width:${(r.progress * 100).toFixed(1)}%"></i></span>`;
 }
 
@@ -108,12 +108,12 @@ function dailyHtml(op: DailyOp, c: CareerData): string {
   const day = today();
   const streak = currentStreak(c, day);
   const wonToday = c.daily.lastWin === op.day;
-  const muts = op.mutators.map((id) => `<span class="dl-mut">${MUTATORS[id].icon} ${MUTATORS[id].name}</span>`).join("");
+  const muts = op.mutators.map((id) => `<span class="dl-mut">${MUTATORS[id].name}</span>`).join("");
   return `
     <div class="dl-head">
-      <span class="dl-tag">📅 Daily Op #${op.number}</span>
+      <span class="dl-tag">Daily Op #${op.number}</span>
       <span class="dl-date">${op.label}</span>
-      <span class="dl-streak${streak > 0 ? " hot" : ""}" title="Daily Op win streak">🔥 ${streak}</span>
+      <span class="dl-streak${streak > 0 ? " hot" : ""}" title="Daily Op win streak">Streak ${streak}</span>
     </div>
     <div class="dl-body">
       <img src="${mapAssetBase(op.mapId)}/thumb.webp" alt="" draggable="false"/>
@@ -128,14 +128,14 @@ function dailyHtml(op: DailyOp, c: CareerData): string {
 
 function mutButtonHtml(): string {
   const on = gameMode.mutators;
-  if (on.length === 0) return `<span class="mb-k">🧪 Mutators</span><span class="mb-v">Off</span>`;
+  if (on.length === 0) return `<span class="mb-k">Mutators</span><span class="mb-v">Off</span>`;
   // (one the picked map can't be played with is left out of its matches: struck through)
   const def = mapById(gameMode.mapId);
   const names = on
     .map((id) => (mapBansMutator(def, id) ? `<s>${MUTATORS[id].icon} ${MUTATORS[id].name}</s>` : `${MUTATORS[id].icon} ${MUTATORS[id].name}`))
     .join(" · ");
   const live = on.some((id) => !mapBansMutator(def, id));
-  return `<span class="mb-k">🧪</span><span class="mb-v on">${names}</span>${live ? `<span class="mb-n">no stars</span>` : ""}`;
+  return `<span class="mb-k">Mutators</span><span class="mb-v on">${names}</span>${live ? `<span class="mb-n">no stars</span>` : ""}`;
 }
 
 export interface MenuCareer {
@@ -146,23 +146,22 @@ export interface MenuCareer {
 }
 
 /**
- * Fill the menu's career slots: `#rankbadge`, `#dailyop`, and every
- * `.mutbtn` (one sits in the main column, a twin in the landscape side panel).
+ * Fill the menu's rank, Daily Op and mutator controls.
  */
 export function mountMenuCareer(menu: HTMLElement, hooks: { playDaily(op: DailyOp): void; changed(): void }): MenuCareer {
   let career = loadCareer();
   const op = dailyOp(today());
   const badge = menu.querySelector<HTMLElement>("#rankbadge");
   const daily = menu.querySelector<HTMLElement>("#dailyop");
-  const mutBtns = [...menu.querySelectorAll<HTMLElement>(".mutbtn")];
+  const mutBtn = menu.querySelector<HTMLButtonElement>(".mutbtn");
 
   const sync = () => {
     career = loadCareer();
     if (badge) badge.innerHTML = rankBadgeHtml(career);
-    for (const b of mutBtns) {
-      b.innerHTML = mutButtonHtml();
-      b.classList.toggle("on", gameMode.mutators.length > 0);
-      b.hidden = gameMode.mode !== "skirmish";
+    if (mutBtn) {
+      mutBtn.innerHTML = mutButtonHtml();
+      mutBtn.classList.toggle("on", gameMode.mutators.length > 0);
+      mutBtn.hidden = gameMode.mode !== "skirmish";
     }
   };
   if (daily) {
@@ -173,14 +172,13 @@ export function mountMenuCareer(menu: HTMLElement, hooks: { playDaily(op: DailyO
     sfx.play("click", 0.5);
     showCareerSheet(menu, career);
   });
-  for (const b of mutBtns)
-    b.addEventListener("click", () => {
-      sfx.play("click", 0.5);
-      showMutatorSheet(menu, () => {
-        sync();
-        hooks.changed();
-      });
+  mutBtn?.addEventListener("click", () => {
+    sfx.play("click", 0.5);
+    showMutatorSheet(menu, () => {
+      sync();
+      hooks.changed();
     });
+  });
   sync();
   return {
     sync,

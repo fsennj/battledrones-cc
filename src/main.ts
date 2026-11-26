@@ -292,84 +292,99 @@ function showMenu(linkedMap?: string | null): void {
   menu.className = "menu";
   const diffs = Object.keys(DIFFICULTY) as Difficulty[];
   menu.innerHTML = `
-    <div class="keyart"></div>
-    <button class="round menu-mute" id="menu-mute" title="Mute all">🔊</button>
-    <div class="menu-inner">
-      <h1 class="logo">BATTLE<br/><span>DRONES</span></h1>
-      <div class="menu-side" id="menuside">
-        <button class="rankbadge" id="rankbadge"></button>
-        <div class="dailyop" id="dailyop"></div>
-        <button class="mutbtn side"></button>
-      </div>
-      <p class="sub" id="sub"></p>
-      <div class="seg modes" id="gmode">
-        <button data-m="skirmish">⚔ Skirmish</button>
-        <button data-m="survival">🛡 Last Stand</button>
-        <button data-m="ops">🎖 Ops</button>
-      </div>
-      <p class="lsbest" id="lsbest" hidden></p>
-      <p class="lsbest opsum" id="opsum" hidden></p>
-      <div class="maps opcards" id="opcards" hidden></div>
-      <p class="blurb opblurb" id="opblurb" hidden></p>
-      <div class="maps" id="maps">
-        ${MAPS.map(
-          (m) => `
-          <button class="mapcard" data-id="${m.id}">
-            <img src="${mapThumbUrl(m.id)}" alt="" draggable="false" />
-            <span class="mn">${m.name}</span>
-            <span class="mb">${m.size}×${m.size} · ${m.players === 4 ? "4 players" : m.biome}</span>
+    <div class="keyart" aria-hidden="true"></div>
+    <button class="round menu-mute" id="menu-mute">Sound <span aria-hidden="true"></span></button>
+    <div class="menu-shell">
+      <header class="menu-brand">
+        <h1 class="logo">BATTLE <span>DRONES</span></h1>
+        <p class="sub" id="sub"></p>
+      </header>
+      <main class="menu-inner" aria-labelledby="menu-heading">
+        <h2 id="menu-heading">Match setup</h2>
+        <div class="seg modes" id="gmode" role="group" aria-label="Game mode">
+          <button data-m="skirmish">Skirmish</button>
+          <button data-m="survival">Last Stand</button>
+          <button data-m="ops">Ops</button>
+        </div>
+        <p class="lsbest" id="lsbest" hidden></p>
+        <h3 class="menu-label" id="menu-field-label">Battlefield</h3>
+        <p class="lsbest opsum" id="opsum" hidden></p>
+        <div class="maps opcards" id="opcards" role="group" aria-labelledby="menu-field-label" hidden></div>
+        <p class="blurb opblurb" id="opblurb" hidden></p>
+        <div class="maps" id="maps" role="group" aria-labelledby="menu-field-label">
+          ${MAPS.map(
+            (m) => `
+            <button class="mapcard" data-id="${m.id}">
+              <img src="${mapThumbUrl(m.id)}" alt="" draggable="false" />
+              <span class="mn">${m.name}</span>
+              <span class="mb">${m.size}×${m.size} · ${m.players === 4 ? "4 players" : m.biome}</span>
+              <span class="mbest" hidden></span>
+              <span class="mstars" hidden></span>
+            </button>`
+          ).join("")}
+          <button class="mapcard rndcard" data-id="${randomId}" id="rndcard">
+            <img src="" alt="" draggable="false" />
+            <span class="mfog" aria-hidden="true"><b>?</b></span>
+            <span class="mzoom" aria-hidden="true"><i>🔍</i></span>
+            <span class="mn"></span>
+            <span class="mb"></span>
             <span class="mbest" hidden></span>
             <span class="mstars" hidden></span>
-          </button>`
-        ).join("")}
-        <button class="mapcard rndcard" data-id="${randomId}" id="rndcard">
-          <img src="" alt="" draggable="false" />
-          <span class="mfog" aria-hidden="true"><b>?</b></span>
-          <span class="mzoom" aria-hidden="true"><i>🔍</i></span>
-          <span class="mn"></span>
-          <span class="mb"></span>
-          <span class="mbest" hidden></span>
-          <span class="mstars" hidden></span>
-          <span class="mrnd">🎲 Random</span>
-        </button>
-      </div>
-      <div class="rndpanel" id="rndpanel" hidden>
-        <div class="seg rndbiome" id="rndbiome">
-          <button data-b="" title="Rerolls pick any biome">🎲 Any</button>
-          ${BIOMES.map((b) => `<button data-b="${b}" title="${cap(b)}">${BIOME_ICON[b]}<span> ${cap(b)}</span></button>`).join("")}
+            <span class="mrnd">🎲 Random</span>
+          </button>
         </div>
-        <div class="rndrow">
-          <label class="rndseed" title="Seed: type or paste a code to grow that map">#<input id="rndseed" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" /></label>
-          <button class="cta alt" id="rndroll">🎲 Reroll</button>
-          <button class="cta alt" id="rndcopy">🔗 Copy link</button>
-        </div>
-        <p class="rndhint"><b>Before you play</b> <span id="rndhint"></span></p>
-        <div class="rndrow">
-          <div class="seg rndview" id="rndview" role="radiogroup" aria-label="Before you play">
-            <button data-u="0" role="radio" title="See the whole map before the match">👁️ Preview</button>
-            <button data-u="1" role="radio" title="The map stays black until you scout it">🌫️ Uncharted</button>
+        <div class="rndpanel" id="rndpanel" hidden>
+          <div class="seg rndbiome" id="rndbiome">
+            <button data-b="" title="Rerolls pick any biome">🎲 Any</button>
+            ${BIOMES.map((b) => `<button data-b="${b}" title="${cap(b)}">${BIOME_ICON[b]}<span> ${cap(b)}</span></button>`).join("")}
           </div>
-          <button class="cta alt" id="rndfull">🔍 View<span class="wide"> full</span> map</button>
+          <div class="rndrow">
+            <label class="rndseed" title="Seed: type or paste a code to grow that map">#<input id="rndseed" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" /></label>
+            <button class="cta alt" id="rndroll">🎲 Reroll</button>
+            <button class="cta alt" id="rndcopy">🔗 Copy link</button>
+          </div>
+          <p class="rndhint"><b>Before you play</b> <span id="rndhint"></span></p>
+          <div class="rndrow">
+            <div class="seg rndview" id="rndview" role="radiogroup" aria-label="Before you play">
+              <button data-u="0" role="radio" title="See the whole map before the match">👁️ Preview</button>
+              <button data-u="1" role="radio" title="The map stays black until you scout it">🌫️ Uncharted</button>
+            </div>
+            <button class="cta alt" id="rndfull">🔍 View<span class="wide"> full</span> map</button>
+          </div>
+          <div class="rndrecent" id="rndrecent"></div>
         </div>
-        <div class="rndrecent" id="rndrecent"></div>
-      </div>
-      <p class="blurb" id="blurb"></p>
-      <div class="seg" id="diff">
-        ${diffs.map((d) => `<button data-d="${d}">${DIFFICULTY[d].label}</button>`).join("")}
-      </div>
-      <button class="mutbtn main"></button>
-      <button class="cta big" id="play">▶ Play</button>
-      <div class="row" id="duelrow" hidden>
-        <button class="cta alt" id="play-online" disabled>🌐 Duel a friend online</button>
-        <button class="cta alt" id="play-duel" disabled hidden>🔊 Duel a friend (sound)</button>
-      </div>
-      <div class="row">
-        <button class="cta alt" id="play-spectate">🤖 Watch AI vs AI</button>
-        <button class="cta alt" id="play-replay">🎬 Watch a replay</button>
-        <button class="cta alt" id="howto">? How to play</button>
-      </div>
-      <div class="help" id="helpbox" hidden>${HELP_HTML}</div>
-      <p class="credits">Art generated with OpenAI gpt-image-2.5 · sound synthesised live</p>
+        <p class="blurb" id="blurb"></p>
+        <div class="menu-difficulty" id="menu-difficulty">
+          <h3 class="menu-label" id="menu-difficulty-label">Difficulty</h3>
+          <div class="seg" id="diff" role="group" aria-labelledby="menu-difficulty-label">
+            ${diffs.map((d) => `<button data-d="${d}">${DIFFICULTY[d].label}</button>`).join("")}
+          </div>
+        </div>
+        <button class="mutbtn"></button>
+        <button class="cta big" id="play">Play</button>
+        <div class="row" id="duelrow" hidden>
+          <button class="cta alt" id="play-online" disabled>Duel a friend online</button>
+          <button class="cta alt" id="play-duel" disabled hidden>Sound duel</button>
+        </div>
+        <div class="row">
+          <button class="cta alt" id="play-spectate">Watch AI vs AI</button>
+          <button class="cta alt" id="play-replay">Replays</button>
+          <button class="cta alt" id="howto">How to play</button>
+        </div>
+        <div class="help" id="helpbox" hidden>${HELP_HTML}</div>
+      </main>
+      <aside class="menu-meta" aria-label="Career and artwork">
+        <a class="menu-art-link" href="art-comparison/">
+          <img src="${mapThumbUrl("riverlands")}" width="68" height="48" alt="" />
+          <span><strong>Before &amp; after</strong><small>Maps and buildings</small></span>
+          <span class="menu-art-arrow" aria-hidden="true">›</span>
+        </a>
+        <div class="menu-side" id="menuside">
+          <button class="rankbadge" id="rankbadge"></button>
+          <div class="dailyop" id="dailyop"></div>
+        </div>
+        <p class="credits">Cover art generated with OpenAI gpt-image-2.5</p>
+      </aside>
     </div>
   `;
   hud.appendChild(menu);
@@ -385,7 +400,11 @@ function showMenu(linkedMap?: string | null): void {
   const biomeOf = (id: string) => mapById(id).biome;
   if (!duelRematch) sfx.unlockOnGesture();
   const muteBtn = menu.querySelector<HTMLButtonElement>("#menu-mute")!;
-  const syncMute = () => (muteBtn.textContent = sfx.muted ? "🔇" : "🔊");
+  const muteState = muteBtn.querySelector("span")!;
+  const syncMute = () => {
+    muteState.textContent = sfx.muted ? "off" : "on";
+    muteBtn.setAttribute("aria-pressed", String(!sfx.muted));
+  };
   syncMute();
   const offMute = sfx.onChange(syncMute);
   muteBtn.addEventListener("click", () => sfx.setMuted(!sfx.muted));
@@ -501,18 +520,20 @@ function showMenu(linkedMap?: string | null): void {
     const opsMode = gameMode.mode === "ops";
     career.sync();
     for (const id of ["#opsum", "#opcards", "#opblurb"]) menu.querySelector<HTMLElement>(id)!.hidden = !opsMode;
-    for (const id of ["#maps", "#blurb", "#diff"]) menu.querySelector<HTMLElement>(id)!.hidden = opsMode;
+    for (const id of ["#maps", "#blurb", "#menu-difficulty"]) menu.querySelector<HTMLElement>(id)!.hidden = opsMode;
+    menu.querySelector("#menu-field-label")!.textContent = opsMode ? "Mission" : "Battlefield";
     syncRandom();
     ops.sync();
     menu.querySelector<HTMLElement>("#play-spectate")!.hidden = opsMode;
     duelRow.hidden = gameMode.mode !== "skirmish";
-    menu.classList.toggle("ops-mode", opsMode);
     // Last Stand isn't offered on every map (the island map): show the first that is, without
     // losing the skirmish pick (Play points the match at the shown map: see begin)
     const shown = shownMap();
     menu.querySelectorAll<HTMLElement>("#maps .mapcard").forEach((el) => {
       el.hidden = !offered(el.dataset.id!);
-      el.classList.toggle("on", el.dataset.id === shown);
+      const selected = el.dataset.id === shown;
+      el.classList.toggle("on", selected);
+      el.setAttribute("aria-pressed", String(selected));
       // Last Stand: each map card shows its best for the chosen difficulty
       const badge = el.querySelector<HTMLElement>(".mbest")!;
       const rec = survival ? loadBest(el.dataset.id!, gameMode.difficulty) : null;
@@ -540,23 +561,26 @@ function showMenu(linkedMap?: string | null): void {
       menuBiome = biome;
       music.play("menu", biome);
     }
-    menu.querySelectorAll<HTMLElement>("#diff button").forEach((el) => el.classList.toggle("on", el.dataset.d === gameMode.difficulty));
-    menu.querySelectorAll<HTMLElement>("#gmode button").forEach((el) => el.classList.toggle("on", el.dataset.m === gameMode.mode));
+    menu.querySelectorAll<HTMLElement>("#diff button, #gmode button").forEach((el) => {
+      const selected = el.dataset.d === gameMode.difficulty || el.dataset.m === gameMode.mode;
+      el.classList.toggle("on", selected);
+      el.setAttribute("aria-pressed", String(selected));
+    });
     const m = mapById(shown);
     const blind = gameMode.uncharted && isRandomMapId(shown);
     menu.querySelector("#blurb")!.textContent = blind ? "An unknown battlefield. Scout it to learn its shape." : m.blurb;
     menu.querySelector<HTMLElement>("#rndpanel")!.hidden = opsMode || !isRandomMapId(shown);
     const four = m.players === 4;
     menu.querySelector("#sub")!.textContent = opsMode
-      ? "Short missions with a twist. Three stars each — can you take them all?"
+      ? "Take on missions with unique objectives and earn up to three stars."
       : survival
-        ? "Hold your base against endless, themed waves. How long can you last?"
+        ? "Hold your base against waves of incoming drones."
         : four
-          ? "Four commanders, one survivor. Knock out every rival's HQ and Goliaths."
+          ? "Four commanders, one survivor. Take out every rival’s HQ and Goliaths."
           : "Mine scrap. Build your swarm. Destroy the enemy HQ and its Goliaths.";
     // a four-player map: no sound duel (two phones only), and online seats up to four
     duelBtn.hidden = !duelable || four;
-    onlineBtn.textContent = four ? "🌐 Battle friends online (up to 4)" : "🌐 Duel a friend online";
+    onlineBtn.textContent = four ? "Play online (up to 4)" : "Duel a friend online";
     const best = menu.querySelector<HTMLElement>("#lsbest")!;
     best.hidden = !survival;
     if (survival) {
@@ -567,11 +591,14 @@ function showMenu(linkedMap?: string | null): void {
         : `No record yet on ${where} — set one!`;
     }
     const sel = ops.selected();
-    menu.querySelector("#play")!.textContent = opsMode
-      ? ops.locked(sel) ? "🔒 Locked" : `▶ Op: ${sel.title}`
-      : survival ? "▶ Start Last Stand" : "▶ Play";
-    menu.querySelector("#play")!.classList.toggle("locked", opsMode && ops.locked(sel));
-    menu.querySelector("#play-spectate")!.textContent = survival ? "🤖 Watch AI defend" : "🤖 Watch AI vs AI";
+    const play = menu.querySelector<HTMLButtonElement>("#play")!;
+    const locked = opsMode && ops.locked(sel);
+    play.textContent = opsMode
+      ? locked ? "Mission locked" : `Play ${sel.title}`
+      : survival ? "Start Last Stand" : `Play ${blind ? "Uncharted" : m.name}`;
+    play.classList.toggle("locked", locked);
+    play.setAttribute("aria-disabled", String(locked));
+    menu.querySelector("#play-spectate")!.textContent = survival ? "Watch AI defend" : "Watch AI vs AI";
   };
   sync();
   menu.querySelectorAll<HTMLElement>("#maps .mapcard").forEach((el) =>

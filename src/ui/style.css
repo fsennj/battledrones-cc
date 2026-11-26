@@ -1150,6 +1150,8 @@ button {
   inset: 0;
   pointer-events: auto;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   background: #070a10;
   z-index: 40;
 }
@@ -1159,59 +1161,124 @@ button {
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-  animation: drift 40s ease-in-out infinite alternate;
+  pointer-events: none;
 }
 .keyart::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(4, 6, 10, 0.1) 0%, rgba(4, 6, 10, 0.55) 45%, rgba(4, 6, 10, 0.94) 75%);
+  background: linear-gradient(90deg, rgba(4, 6, 10, 0.18) 4%, rgba(4, 6, 10, 0.38) 44%, rgba(4, 6, 10, 0.91) 100%),
+    linear-gradient(180deg, transparent 24%, rgba(4, 6, 10, 0.85));
 }
-@media (orientation: landscape) {
-  .keyart::after {
-    background: linear-gradient(90deg, rgba(4, 6, 10, 0.2) 0%, rgba(4, 6, 10, 0.75) 55%, rgba(4, 6, 10, 0.95) 100%);
-  }
-  .menu-inner {
-    margin-left: auto !important;
-    margin-right: max(4vw, env(safe-area-inset-right)) !important;
-  }
+.menu-shell {
+  position: relative;
+  max-width: 1340px;
+  min-height: 100%;
+  margin-inline: auto;
+  padding: max(72px, env(safe-area-inset-top)) max(clamp(20px, 4vw, 64px), env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(clamp(20px, 4vw, 64px), env(safe-area-inset-left));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, min(500px, 58%));
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas: "brand setup" "meta setup";
+  gap: 28px clamp(28px, 6vw, 104px);
 }
-@keyframes drift {
-  from {
-    transform: scale(1.04) translate(-1%, 0);
-  }
-  to {
-    transform: scale(1.1) translate(1%, -1%);
-  }
+.menu-brand {
+  grid-area: brand;
+  align-self: end;
+  min-width: 0;
+  padding-bottom: clamp(32px, 8vh, 96px);
 }
 .menu-inner {
-  position: relative;
-  max-width: 460px;
-  margin: 0 auto;
-  padding: max(28px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom));
-  text-align: center;
+  grid-area: setup;
+  align-self: center;
+  min-width: 0;
+  padding: clamp(16px, 2vw, 28px);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-height: 100%;
-  justify-content: flex-end;
+  gap: 10px;
+  border: 1px solid var(--line-hi);
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4), inset 0 1px rgba(255, 255, 255, 0.06);
 }
+.menu-inner > h2 {
+  font-size: 28px;
+  line-height: 1;
+}
+.menu-label {
+  margin: 3px 0 -4px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+.menu-difficulty {
+  display: grid;
+  gap: 8px;
+}
+.menu-meta {
+  grid-area: meta;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  width: min(100%, 380px);
+  align-self: end;
+}
+.menu-art-link {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px 6px 6px;
+  border: 1px solid var(--line-hi);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  text-decoration: none;
+}
+.menu-art-link:hover {
+  border-color: var(--gold);
+  background: var(--panel-solid);
+}
+.menu-art-link img {
+  display: block;
+  width: 68px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 7px;
+}
+.menu-art-link strong, .menu-art-link small {
+  display: block;
+  line-height: 1.2;
+}
+.menu-art-link strong { font-size: 18px; }
+.menu-art-link small { color: var(--dim); font-size: 13px; }
+.menu-art-arrow { color: var(--gold); font-size: 26px; }
+.menu :is(button, a):focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.menu .mapcard:focus-visible { outline-offset: -2px; }
 .logo {
-  font-size: 46px;
-  line-height: 0.95;
-  letter-spacing: 6px;
-  font-weight: 900;
+  font-size: clamp(56px, 8.4vw, 118px);
+  line-height: 0.79;
+  letter-spacing: 0.035em;
+  font-weight: 700;
   color: #fff;
-  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.8), 0 0 40px rgba(76, 157, 255, 0.5);
+  text-shadow: 0 6px 36px rgba(0, 0, 0, 0.75);
 }
 .logo span {
+  display: block;
   color: var(--gold);
-  letter-spacing: 9px;
 }
 .sub {
-  color: #c3cde0;
+  max-width: 28em;
+  margin-top: 18px;
+  color: var(--text);
+  font-size: clamp(15px, 1.6vw, 22px);
   font-weight: 600;
-  text-shadow: 0 2px 8px #000;
+  text-shadow: 0 2px 8px #000, 0 2px 20px #000;
 }
 .maps {
   display: flex;
@@ -1353,8 +1420,10 @@ button {
 }
 .menu .row .cta.alt {
   flex: 1;
+  min-width: 0;
+  min-height: 42px;
   margin: 0;
-  padding: 10px 8px;
+  padding: 7px 6px;
 }
 .menu .help {
   background: rgba(12, 18, 28, 0.92);
@@ -1364,34 +1433,71 @@ button {
   margin: 0;
 }
 .credits {
-  font-size: 11px;
-  color: #5d6a80;
+  padding-inline: 3px;
+  color: var(--dim);
+  font-size: 12px;
 }
 
-/* short landscape phones: everything must fit above the fold */
+@media (orientation: portrait), (max-width: 640px) {
+  .keyart { background-position: center top; }
+  .keyart::after {
+    background: linear-gradient(180deg, rgba(4, 6, 10, 0.22) 0%, rgba(4, 6, 10, 0.52) 34%, rgba(4, 6, 10, 0.95) 90%);
+  }
+  .menu-shell {
+    max-width: 540px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas: "brand" "setup" "meta";
+    align-content: start;
+    gap: 14px;
+    padding-inline: max(14px, env(safe-area-inset-left)) max(14px, env(safe-area-inset-right));
+  }
+  .menu-brand { padding: 0 3px; }
+  .logo { font-size: clamp(33px, 10.5vw, 60px); line-height: 1; }
+  .logo span { display: inline; }
+  .sub { margin-top: 4px; }
+  .menu-inner > h2 { font-size: 24px; }
+  .menu-meta { width: auto; }
+}
+@media (orientation: portrait) {
+  .menu:not(.has-update) .menu-art-link {
+    position: absolute;
+    top: max(10px, env(safe-area-inset-top));
+    right: max(14px, env(safe-area-inset-right));
+    min-height: 44px;
+    gap: 8px;
+    padding: 5px 9px 5px 5px;
+  }
+  .menu:not(.has-update) .menu-art-link img { width: 36px; height: 30px; }
+  .menu:not(.has-update) .menu-art-link strong { font-size: 15px; }
+  .menu:not(.has-update) .menu-art-link small { display: none; }
+}
+@media (orientation: portrait) and (max-height: 760px) {
+  .menu-shell { padding-top: max(64px, env(safe-area-inset-top)); gap: 10px; }
+  .menu-inner { gap: 7px; padding: 12px; }
+  .menu-inner > h2 { font-size: 21px; }
+  .menu .seg button { min-height: 34px; }
+  .menu .mutbtn { min-height: 36px; }
+}
+@media (orientation: portrait) and (max-height: 650px) {
+  .menu-brand .sub, .menu-inner > h2 { display: none; }
+}
 @media (orientation: landscape) and (max-height: 500px) {
+  .menu-shell { column-gap: 20px; padding-top: max(56px, env(safe-area-inset-top)); }
+  .menu-brand { padding-bottom: 0; }
+  .logo { font-size: clamp(38px, 6.9vw, 65px); }
   .menu-inner {
-    justify-content: center;
-    gap: 7px;
-    max-width: 440px;
-    padding-top: max(10px, env(safe-area-inset-top));
-    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: 6px;
+    padding: 12px;
   }
-  .logo {
-    font-size: 30px;
-    letter-spacing: 4px;
-  }
-  .logo br {
-    display: none;
-  }
-  .logo span {
-    letter-spacing: 4px;
-    margin-left: 10px;
-  }
-  .sub,
-  .credits {
-    display: none;
-  }
+  .menu-inner > * { grid-column: 1 / -1; }
+  .menu-inner > h2, .menu-difficulty > .menu-label { display: none; }
+  .menu-inner > #gmode { grid-area: 1 / 1 / 2 / 2; }
+  .menu-inner > .menu-difficulty { grid-area: 1 / 2 / 2 / 3; }
+  .menu-inner:has(> .menu-difficulty[hidden]) > #gmode { grid-column: 1 / -1; }
+  .sub { margin-top: 10px; }
   .mapcard {
     flex-basis: 80px;
   }
@@ -1401,16 +1507,21 @@ button {
   .blurb {
     font-size: 13px;
   }
-  .seg button {
+  .menu .seg button {
     min-height: 34px;
+    font-size: 14px;
   }
-  .cta.big {
+  .menu .mutbtn { min-height: 32px; }
+  .menu .cta.big {
     min-height: 46px;
     font-size: 19px;
   }
   .menu .row .cta.alt {
     min-height: 40px;
   }
+}
+@media (orientation: landscape) and (max-height: 380px) {
+  .menu-inner { gap: 5px; padding-block: 8px; }
 }
 
 /* ------------------------------------------- scrap pill income / spend --- */
@@ -1451,24 +1562,32 @@ button {
 
 /* ------------------------------------------- sound settings (music.ts) --- */
 /* menu: the same one-tap master mute as in game, top-left over the key art */
-.menu-mute {
+.menu .menu-mute {
   /* scrolls with the menu (its scroller), so it never sits on How to play */
   position: absolute;
   top: max(10px, env(safe-area-inset-top));
   left: max(10px, env(safe-area-inset-left));
   z-index: 2;
-  width: 44px;
+  width: 88px;
   height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
 }
 /* menu: "New version ready · Update" once a new build has taken over
    (src/ui/update.ts), at the top beside the mute button, over the key art */
 .update-pill {
   position: absolute;
   top: max(10px, env(safe-area-inset-top));
-  left: calc(max(10px, env(safe-area-inset-left)) + 54px);
+  left: calc(max(10px, env(safe-area-inset-left)) + 98px);
   right: max(10px, env(safe-area-inset-right));
   z-index: 2;
   display: flex;
+  max-width: 360px;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
@@ -1514,44 +1633,9 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .update-pill { animation: none; }
 }
-/* portrait: a menu tall enough to reach the top scrolls down from under the pill */
-@media (orientation: portrait) {
-  .menu.has-update .menu-inner {
-    padding-top: calc(max(10px, env(safe-area-inset-top)) + 58px);
-  }
-}
-/* landscape: over the key art, clear of the menu column on the right (up to
-   460 px wide, its words 18 px in, max(4vw, safe area) from the edge) */
-@media (orientation: landscape) {
-  .update-pill {
-    right: auto;
-    width: min(
-      340px,
-      calc(100vw - max(4vw, env(safe-area-inset-right)) - max(10px, env(safe-area-inset-left)) - 508px)
-    );
-  }
-}
-/* short landscape phones: one line (the menu column is 440 px here) */
-@media (orientation: landscape) and (max-height: 500px) {
-  .update-pill {
-    width: min(
-      340px,
-      calc(100vw - max(4vw, env(safe-area-inset-right)) - max(10px, env(safe-area-inset-left)) - 488px)
-    );
-  }
+@media (max-width: 420px) {
+  .update-pill .up-t { flex-basis: 90px; }
   .update-pill .up-t span { display: none; }
-}
-/* narrow landscape phones: under the mute button, the button under the words */
-@media (orientation: landscape) and (max-width: 699px) {
-  .update-pill {
-    top: calc(max(10px, env(safe-area-inset-top)) + 54px);
-    left: max(10px, env(safe-area-inset-left));
-    width: calc(96vw - 450px - max(10px, env(safe-area-inset-left)));
-    flex-direction: column;
-    align-items: stretch;
-    padding: 8px;
-  }
-  .update-pill .up-t { flex: none; }
 }
 /* pause menu: All / Music / Effects / Voice toggles (src/ui/audio-panel.ts) */
 .sound-row {
@@ -2604,35 +2688,6 @@ button {
   from { transform: scale(1.6); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
-/* short landscape phones: mode and difficulty share a row to stay above the fold */
-@media (orientation: landscape) and (max-height: 500px) {
-  .menu-inner {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    align-content: center;
-    column-gap: 8px;
-  }
-  .menu-inner > * {
-    grid-column: 1 / -1;
-  }
-  .menu-inner > #gmode {
-    grid-column: 1;
-    grid-row: 2;
-  }
-  .menu-inner > #diff {
-    grid-column: 2;
-    grid-row: 2;
-  }
-  .seg.modes button,
-  .menu-inner > #diff button {
-    min-height: 40px;
-    font-size: 14px;
-  }
-  .lsbest {
-    margin-top: 0;
-    font-size: 13px;
-  }
-}
 /* short landscape: the run summary goes side by side so the buttons stay visible */
 @media (orientation: landscape) and (max-height: 500px) {
   .panel.laststand-end {
@@ -3340,7 +3395,6 @@ button {
   border-color: rgba(255, 214, 110, 0.6);
   background: rgba(60, 40, 12, 0.85);
 }
-.mutbtn.side { display: none; }
 .mapcard .mstars {
   position: absolute;
   top: 8px;
@@ -3359,51 +3413,14 @@ button {
   grid-column: 1 / -1;
   margin-top: 0;
 }
-/* portrait: the career block adds height, so the menu tightens to stay on one screen */
 @media (orientation: portrait) {
-  .menu-inner { gap: 10px; }
-  .logo { font-size: 42px; }
-  .sub { font-size: 13px; margin: -2px 0; }
+  .menu-inner .mapcard { flex-basis: 96px; }
+  .menu-inner .mapcard:not(.opcard) img { aspect-ratio: 1.2; }
   .menu .cta.big { min-height: 52px; }
   .rankbadge { min-height: 50px; padding: 6px 12px; }
 }
-/* short portrait phones (SE-class): one-line logo, no tagline or map sizes */
 @media (orientation: portrait) and (max-height: 760px) {
-  .logo { font-size: 30px; letter-spacing: 4px; }
-  .logo br { display: none; }
-  .logo span { letter-spacing: 4px; margin-left: 10px; }
-  .sub,
-  .mapcard .mb { display: none; }
-  .mapcard { flex-basis: 92px; }
-}
-/* landscape: the meta column (rank, Daily Op, mutators) sits over the key art */
-@media (orientation: landscape) {
-  .menu-side {
-    position: fixed;
-    left: max(16px, env(safe-area-inset-left));
-    bottom: max(14px, env(safe-area-inset-bottom));
-    width: min(340px, calc(100vw - 520px));
-    z-index: 1;
-  }
-  .mutbtn.main { display: none; }
-  .mutbtn.side { display: flex; }
-}
-/* mid-width landscape phones (736–779 px): a slimmer menu column makes room */
-@media (orientation: landscape) and (min-width: 700px) and (max-width: 779px) {
-  .menu-inner { max-width: 400px !important; }
-  .menu-side { width: calc(100vw - 480px); }
-  .dl-body { grid-template-columns: 1fr auto; }
-  .dl-body img { display: none; }
-  .dl-date { display: none; }
-  .rb-t b { font-size: 15px; letter-spacing: 1px; }
-}
-/* narrow landscape phones: no room beside the menu, so it follows it (scroll) */
-@media (orientation: landscape) and (max-width: 699px) {
-  .menu-side {
-    position: static;
-    width: auto;
-    grid-row: 30;
-  }
+  .menu-inner .mapcard:not(.opcard) img { aspect-ratio: 1.35; }
 }
 
 /* bottom sheets: mutator picker and the Career sheet */
@@ -4169,11 +4186,7 @@ button {
     margin-top: 10px;
   }
 }
-/* short landscape: no difficulty picker in Ops, so the mode selector takes the row; slimmer cards */
 @media (orientation: landscape) and (max-height: 500px) {
-  .menu.ops-mode .menu-inner > #gmode {
-    grid-column: 1 / -1;
-  }
   .opcard {
     flex-basis: 96px;
   }
