@@ -192,11 +192,15 @@ def join(objs, name, shift=(0, 0, 0), ao=(0.15, 0.4)):
     return o
 
 
-def export_and_preview(hull, turret, name, ortho=2.0):
+def export_model(name):
     bpy.ops.export_scene.gltf(
-        filepath=f"{OUT}/{name}.glb",
+        filepath=os.path.join(os.path.abspath(OUT), f"{name}.glb"),
         export_format="GLB", export_vertex_color="ACTIVE", export_materials="NONE",
         export_animations=False, export_apply=True)
+
+
+def export_and_preview(hull, turret, name, ortho=2.0):
+    export_model(name)
     mat = bpy.data.materials.new("vc"); mat.use_nodes = True
     nt = mat.node_tree
     bsdf = nt.nodes["Principled BSDF"]

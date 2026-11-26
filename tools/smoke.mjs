@@ -36,13 +36,13 @@ if (!urlArg) {
     res.writeHead(200, { "content-type": MIME[extname(file)] ?? "application/octet-stream" });
     res.end(readFileSync(file));
   });
-  await new Promise((r) => server.listen(8899, r));
+  await new Promise((r) => server.listen(8899, "127.0.0.1", r));
 }
-const target = new URL(urlArg ?? "http://localhost:8899/");
+const target = new URL(urlArg ?? "http://127.0.0.1:8899/");
 if (side === "red") target.searchParams.set("side", "red");
 const url = target.href;
 
-const exe = ["/opt/pw-browsers/chromium-1194/chrome-linux/chrome"].find((p) => existsSync(p));
+const exe = process.env.BATTLEDRONES_CHROME ?? ["/opt/pw-browsers/chromium-1194/chrome-linux/chrome"].find((p) => existsSync(p));
 const browser = await chromium.launch({
   executablePath: exe,
   args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]

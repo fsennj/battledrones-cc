@@ -116,6 +116,8 @@ export interface EdgeUniforms {
 export interface GroundUniforms extends EdgeUniforms {
   /** Grain contrast, north-west emboss of the grain, sharpening of the paint. */
   uDetail: { value: THREE.Vector3 };
+  /** RGB paint multipliers and desaturation, per biome. */
+  uGroundGrade: { value: THREE.Vector4 };
   /** The biome's open ground (linear), which the skirt eases into. */
   uFarGround: { value: THREE.Color };
 }
@@ -169,17 +171,24 @@ function swap(src: string, anchor: string, by: string): string {
  */
 export function patchGround(s: Shader, u: GroundUniforms, rock: RockUniforms | null = null): void {
   Object.assign(s.uniforms, u, rock ?? {});
+  let attributes = "attribute float aContactShade;\nvarying float vContactShade;";
+  let varyings = "vContactShade = aContactShade;";
   if (rock) {
-    const decl = "attribute vec4 aStone;\nattribute float aSteep;\nvarying vec4 vStone;\nvarying float vSteep;";
-    s.vertexShader = swap(s.vertexShader, "#include <common>", `#include <common>\n${decl}`);
-    s.vertexShader = swap(s.vertexShader, "#include <begin_vertex>", "#include <begin_vertex>\nvStone = aStone;\nvSteep = aSteep;");
+    attributes += "\nattribute vec4 aStone;\nattribute float aSteep;\nvarying vec4 vStone;\nvarying float vSteep;";
+    varyings += "\nvStone = aStone;\nvSteep = aSteep;";
   }
+  s.vertexShader = swap(s.vertexShader, "#include <common>", `#include <common>\n${attributes}`);
+  s.vertexShader = swap(s.vertexShader, "#include <begin_vertex>", `#include <begin_vertex>\n${varyings}`);
   if (!s.fragmentShader.includes(FOG_LOOKUP)) throw new Error("terrain: fog lookup not found");
   s.fragmentShader = s.fragmentShader
     .replace(FOG_LOOKUP, FOG_MIRRORED)
     .replace(
       "#include <fog_pars_fragment>",
-      `#include <fog_pars_fragment>\n${EDGE_DECL}\n${rock ? `${ROCK_DECL}\nvarying vec4 vStone;\nvarying float vSteep;` : ""}\nuniform vec3 uDetail;\nuniform vec3 uFarGround;`
+      `#include <fog_pars_fragment>\n${EDGE_DECL}\n${rock ? `${ROCK_DECL}\nvarying vec4 vStone;\nvarying float vSteep;` : ""}
+      uniform vec3 uDetail;
+      uniform vec4 uGroundGrade;
+      uniform vec3 uFarGround;
+      varying float vContactShade;`
     )
     .replace(
       "#include <map_fragment>",
@@ -194,15 +203,15 @@ export function patchGround(s: Shader, u: GroundUniforms, rock: RockUniforms | n
         vec3 soft = texture2D( map, vMapUv, blur + 1.5 ).rgb;
         float sharp = mix( uDetail.z, -0.5, smoothstep( 0.35, 0.8, vFowW.y ) ) * ( 1.0 - smoothstep( 0.0, 1.0, od ) );
         diffuseColor.rgb = max( diffuseColor.rgb + ( diffuseColor.rgb - soft ) * sharp, 0.0 );
-        // RA-look: the baked paint is muted toward olive steel (its green turf glowed too much)
-        float ol = dot( diffuseColor.rgb, vec3( 0.30, 0.50, 0.20 ) );
-        diffuseColor.rgb = mix( diffuseColor.rgb, vec3( ol * 0.78, ol * 0.86, ol * 0.60 ), 0.45 );
       }
       #endif`
     )
     .replace(
       "#include <color_fragment>",
-      /* glsl */ `#include <color_fragment>${rock ? CLIFF_WALLS : ""}
+      /* glsl */ `#include <color_fragment>
+      float luma = dot( diffuseColor.rgb, vec3( 0.2126, 0.7152, 0.0722 ) );
+      diffuseColor.rgb = mix( diffuseColor.rgb, vec3( luma ), uGroundGrade.w ) * uGroundGrade.rgb;
+      ${rock ? CLIFF_WALLS : ""}
       {
         vec2 wp = vFowW.xz;
         if ( od > 0.0 ) {
@@ -216,6 +225,7 @@ export function patchGround(s: Shader, u: GroundUniforms, rock: RockUniforms | n
         float g0 = texture2D( uTNoise, gp ).r;
         float g1 = texture2D( uTNoise, gp + vec2( 0.0045, 0.0035 ) ).r;
         diffuseColor.rgb *= 1.0 + ( g0 - 0.5 ) * uDetail.x + ( g1 - g0 ) * uDetail.y;
+        diffuseColor.rgb *= 1.0 - vContactShade;
         diffuseColor.rgb = bdDim( diffuseColor.rgb, od );
       }`
     )
@@ -299,6 +309,11 @@ export function patchLiquid(s: Shader, u: LiquidUniforms): void {
         float foam = ( 1.0 - smoothstep( 0.0, lap, vDepth ) ) * ( 0.55 + 0.45 * n );
         float line = ( 1.0 - smoothstep( 0.0, 0.03, abs( vDepth - lap - 0.045 ) ) ) * smoothstep( 0.45, 0.65, n2 );
         foam = max( foam, line * 0.4 );
+        // Refracted light on the shallow bed, broken up by the same swells as the foam.
+        vec2 bent = vXZ * 0.23 + ( vec2( n1, n2 ) - 0.5 ) * 0.16 + vec2( uWT * 0.006, -uWT * 0.004 );
+        float caustic = 1.0 - smoothstep( 0.01, 0.10, texture2D( uTNoise, bent ).b );
+        float shelf = smoothstep( 0.035, 0.1, vDepth ) * ( 1.0 - smoothstep( 0.17, 0.31, vDepth ) );
+        wc += uShallow * ( caustic * shelf * 0.42 );
         wc = mix( wc, vec3( 0.9, 0.95, 0.96 ), foam );
         alpha = max( alpha, foam * 0.8 );
       } else if ( uMode > 1.5 ) {

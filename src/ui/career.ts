@@ -319,10 +319,13 @@ export function rulesLine(w: World): string {
   return parts.join(" · ");
 }
 
-/** Build buttons: a kind the mutators disable shows ⛔ rather than the tech lock. */
+/** Build buttons distinguish rules bans from unmet prerequisites. */
 export function markBanned(lock: HTMLElement, w: World, kind: UnitKind | BuildingKind): void {
-  const icon = bannedBy(w, kind, PLAYER) ? "⛔" : "🔒";
-  if (lock.textContent !== icon) lock.textContent = icon;
+  const banned = bannedBy(w, kind, PLAYER) !== null;
+  const label = banned ? "Banned by match rules" : "Locked";
+  if (lock.getAttribute("aria-label") === label) return;
+  lock.setAttribute("aria-label", label);
+  lock.classList.toggle("banned", banned);
 }
 
 /** For the pause screen: the active rules, if any. */

@@ -354,6 +354,22 @@ export function bridgeGeometry(w: World, colour: number, steel: boolean): { geo:
       if (n === 1) b.box(0.13, 0.9, 0.13, [x + Math.sign(ox) * 0.12, -0.55, z + Math.sign(oz) * 0.12], steel ? 0x2a2a2c : 0x4a3a2c);
     }
   }
+  // Recessed approach lights mark the usable width of each crossing. The steel
+  // housings and amber lenses join the deck's mesh and existing fog material.
+  for (const { cx, cz, ux, uz, hl, hw } of spans) {
+    if (hw < 0.23 || hl < 0.35) continue;
+    const rot: Vec3 = [0, -Math.atan2(uz, ux), 0];
+    for (const end of [-1, 1]) {
+      const u = end * (hl - 0.23);
+      for (const side of [-1, 1]) {
+        const v = side * (hw - 0.14);
+        const x = cx + u * ux - v * uz;
+        const z = cz + u * uz + v * ux;
+        b.box(0.24, 0.045, 0.13, [x, TOP + 0.022, z], 0x33383c, { rot });
+        b.box(0.17, 0.013, 0.074, [x, TOP + 0.049, z], 0xffbd65, { rot, glow: 0.88 });
+      }
+    }
+  }
   return { geo: b.empty ? null : b.build(), spans };
 }
 

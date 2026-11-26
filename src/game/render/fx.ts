@@ -520,7 +520,7 @@ export class Fx {
     const k = size > 1 ? 1 / Math.sqrt(size) : 1;
     this.flash(p, size * flashK, 0xffc870, flashA * k);
     tmpC.setHex(0xfff2d0);
-    pt.spawn({ x: p.x, y: p.h + 0.1, z: p.y, life: 130, tex: TEX.glow, size0: size * 0.75, size1: size * 1.2, alpha0: 0.9 * k * Math.min(1, flashA + 0.1), alpha1: 0, r: tmpC.r, g: tmpC.g, b: tmpC.b }, true);
+    pt.spawn({ x: p.x, y: p.h + 0.1, z: p.y, life: 110, tex: TEX.glow, size0: size * 0.65, size1: size * 1.12, alpha0: 0.78 * k * Math.min(1, flashA + 0.1), alpha1: 0, r: tmpC.r, g: tmpC.g, b: tmpC.b }, true);
     const n = (a: number, b: number) => Math.round(a + size * b);
     // smoke first, so the fire draws over it
     pt.emit(
@@ -548,7 +548,8 @@ export class Fx {
     );
     if (size >= 0.9) this.emit(EMBERS, p, n(-1, 3));
     if (!air && size >= 0.5) {
-      this.shock(p.x, p.y, size, 0xffd9a0, 0.32);
+      const water = !this.lava && this.liquid(p.x, p.y);
+      this.shock(p.x, p.y, size, water ? 0xc4ecff : 0xffd9a0, water ? 0.46 : 0.32, water ? 460 : 300);
       if (size >= 0.6) this.kick(p.x, p.y, n(1, 3));
     }
     if (decal && !air) this.decal(p.x, p.y, size);

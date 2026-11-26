@@ -1321,9 +1321,16 @@ export function unitDef(kind: UnitKind, f: Faction): ModelDef {
     const d = UNIT_MODELS[kind](TEAMS[f]);
     const g = glbUnit(kind);
     if (!g) return d;
-    // a Blender model replaces the hull and turret shapes; mount, muzzle and height stay as modelled in code
+    // Use the Blender geometry at the same pivots as the procedural model.
     const paint = (geo: THREE.BufferGeometry) => (f === "blue" ? geo : recolor(geo, TEAMS.blue, TEAMS[f]));
-    return { ...d, hull: paint(g.hull), turret: g.turret ? paint(g.turret) : d.turret };
+    const rotor = g.rotor && paint(g.rotor);
+    return {
+      ...d,
+      hull: paint(g.hull),
+      turret: g.turret ? paint(g.turret) : d.turret,
+      rotors: rotor ? d.rotors.map((r) => ({ ...r, geo: rotor })) : d.rotors,
+      ramp: g.ramp && d.ramp ? { ...d.ramp, geo: paint(g.ramp) } : d.ramp,
+    };
   });
 }
 

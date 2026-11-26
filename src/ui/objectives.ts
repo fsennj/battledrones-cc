@@ -27,7 +27,7 @@ export function createObjectivePill(world: World, player: Faction, spectator: bo
   if (!bar || (o.uplinks.length === 0 && o.dropSites.length === 0)) return null;
   const el = document.createElement("div");
   el.className = "objpill";
-  el.innerHTML = `<span class="ol" title="Uplinks"><b>📡</b><span class="pips"></span></span><span class="lf" title="A free Condor is on its way" hidden></span><span class="od" title="Supply drops"></span>`;
+  el.innerHTML = `<span class="ol" title="Uplinks"><span class="pips"></span></span><span class="lf" title="A free Condor is on its way" hidden></span><span class="od" title="Supply drops"></span>`;
   bar.appendChild(el);
   const pipsEl = el.querySelector<HTMLElement>(".pips")!;
   const dropEl = el.querySelector<HTMLElement>(".od")!;
@@ -69,7 +69,7 @@ export function createObjectivePill(world: World, player: Faction, spectator: bo
     }
     // a free replacement Condor on its way (lifeline.ts)
     const due = spectator ? null : world.lifeline?.[player]?.due ?? null;
-    const life = due === null ? "" : `🚁 ${clock(due - world.tick)}`;
+    const life = due === null ? "" : clock(due - world.tick);
     if (life !== lastLife) {
       lastLife = life;
       lifeEl.hidden = life === "";
@@ -81,15 +81,15 @@ export function createObjectivePill(world: World, player: Faction, spectator: bo
     const landed = o.crates.filter((c) => world.tick >= c.landTick);
     const inbound = o.crates.filter((c) => world.tick < c.landTick);
     if (inbound.length > 0) {
-      text = `📦 ${clock(inbound[0]!.landTick - world.tick)}`;
+      text = clock(inbound[0]!.landTick - world.tick);
       cls = "od hot";
     } else if (landed.length > 0) {
       const left = Math.min(...landed.map((c) => c.expireTick - world.tick));
-      text = `📦×${landed.length} ${clock(left)}`;
+      text = `×${landed.length} ${clock(left)}`;
       cls = "od live";
     } else {
       // the next drop's landing (it's announced 10 s before)
-      text = `📦 ${clock(dropLandTick(o.drops) - world.tick)}`;
+      text = clock(dropLandTick(o.drops) - world.tick);
       cls = "od";
     }
     const key = text + cls;

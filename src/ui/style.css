@@ -175,9 +175,9 @@ button {
 #minimap {
   display: block;
   pointer-events: auto;
-  width: 124px;
-  height: 124px;
-  border-radius: 7px;
+  width: var(--radar-size);
+  height: var(--radar-size);
+  border-radius: 3px;
 }
 /* the map sits recessed in its bezel like a screen (a static overlay: taps go through) */
 .minimap-wrap::after {
@@ -362,7 +362,6 @@ button {
 @media (orientation: portrait) {
   /* (a stacked column, no row to line up with: the two lines get their breathing room) */
   .versus {
-    max-width: calc(100vw - 236px);
     height: auto;
     padding: 3px 10px 4px;
     line-height: 1.25;
@@ -626,9 +625,10 @@ button {
   flex: 1 0 48px;
   max-width: 76px;
   height: 74px;
-  border-radius: 10px;
-  border: 1px solid #2c3a55;
-  background: radial-gradient(circle at 50% 35%, #22324f 0%, #141d2e 70%);
+  border-radius: 4px;
+  border: 1px solid #45515d;
+  background: radial-gradient(ellipse at 50% 12%, #344654, #192229 70%, #141a20);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13);
   color: var(--text);
   display: flex;
   flex-direction: column;
@@ -651,7 +651,7 @@ button {
 }
 .bb .nm {
   position: relative;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
   max-width: 100%;
@@ -661,7 +661,8 @@ button {
 }
 .bb .cost {
   position: relative;
-  font-size: 11px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
   color: var(--gold);
   line-height: 1;
@@ -670,26 +671,58 @@ button {
   transform: scale(0.96);
 }
 .bb.poor .cost {
-  color: #b35a4e;
+  color: var(--red);
 }
 .bb.poor .ic,
 .bb.busy .ic {
   opacity: 0.55;
 }
-/* locked: the portrait stays readable (it's what you're working toward), greyed, with a small padlock */
+/* Locked tiles use a dashed rim and keep their labels readable. */
+.bb.locked {
+  border-style: dashed;
+  border-color: #596573;
+  background: linear-gradient(#282f35, #181e23);
+}
 .bb.locked .ic {
   opacity: 0.6;
   filter: grayscale(1) brightness(0.8) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7));
 }
 .bb.locked .nm,
 .bb.locked .cost {
-  opacity: 0.5;
+  color: #a6b3c2;
 }
 .bb .lock {
   position: absolute;
-  top: 2px;
+  top: 8px;
+  left: 5px;
+  width: 9px;
+  height: 7px;
+  border-radius: 1px;
+  background: currentColor;
+  color: #a6b3c2;
+}
+.bb .lock::before {
+  content: "";
+  position: absolute;
+  inset: -5px 1px 5px;
+  border: 1px solid currentColor;
+  border-radius: 5px 5px 0 0;
+}
+.bb .lock.banned {
+  top: 4px;
   left: 3px;
-  font-size: 11px;
+  width: 13px;
+  height: 13px;
+  background: var(--instrument-bg);
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: var(--red);
+}
+.bb .lock.banned::before {
+  inset: 5px 2px auto;
+  border: 0;
+  border-top: 1px solid currentColor;
+  border-radius: 0;
 }
 .bb.ready {
   border-color: #37d67a;
@@ -713,15 +746,15 @@ button {
   text-shadow: 0 1px 2px #000;
 }
 .bb.placing {
-  background: #1e3a2a;
+  background: linear-gradient(#264d3a, #142a21);
 }
 .bb .badge {
   position: absolute;
   top: 3px;
   right: 3px;
   background: var(--blue);
-  color: #fff;
-  border-radius: 8px;
+  color: #0c1722;
+  border-radius: 4px;
   font-size: 11px;
   font-weight: 800;
   min-width: 17px;
@@ -840,15 +873,10 @@ button {
     top: var(--zoom-top, 38%);
   }
   @media (max-width: 420px) {
-    #minimap {
-      width: 108px;
-      height: 108px;
-    }
     .res {
       font-size: 17px;
       padding-left: 10px;
       padding-right: 10px;
-      max-width: calc(100vw - 232px);
     }
   }
   .card {
@@ -879,19 +907,12 @@ button {
     display: none;
   }
   .topbar {
-    left: calc(max(8px, env(safe-area-inset-left)) + 94px);
     transform: none;
     flex-direction: column;
-    /* one instrument column: every pill (and the battle meter under them) shares
-       the widest one's edges instead of a ragged stack of stickers; at least the
-       scrap pill's widest, so the column holds still as the scrap ticks */
     align-items: stretch;
     gap: 4px;
-    min-width: min(calc(100vw - 248px), 160px);
   }
-  /* never under the minimap: (round buttons 102 px) + (minimap + gap) */
   .res {
-    max-width: calc(100vw - 248px);
     overflow: hidden;
     white-space: nowrap;
   }
@@ -964,10 +985,6 @@ button {
     flex-wrap: wrap;
     justify-content: center;
     row-gap: 4px;
-  }
-  #minimap {
-    width: 112px;
-    height: 112px;
   }
 }
 @media (orientation: landscape) and (max-height: 420px) {
@@ -2397,20 +2414,10 @@ button {
   .sq {
     width: 40px;
   }
-  /* the top-bar column between the round buttons and the minimap is ~130 px here */
-  #minimap {
-    width: 100px;
-    height: 100px;
-  }
   .res {
     font-size: 16px;
-    padding-left: 9px;
-    padding-right: 9px;
+    padding-inline: 6px;
     gap: 5px;
-    max-width: calc(100vw - 224px);
-  }
-  .topbar {
-    min-width: min(calc(100vw - 224px), 160px);
   }
   .res .rate {
     font-size: 11px;
@@ -4771,7 +4778,7 @@ button {
 
 
 /* ------------------------------------- map objectives: top-bar pill --- */
-/* 📡 one pip per Uplink in its holder's colour · 📦 supply-drop timer.  */
+/* One pip per Uplink, in its holder's colour, and the supply-drop timer. */
 .objpill {
   display: flex;
   align-items: center;
@@ -4796,9 +4803,6 @@ button {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-.objpill .ol b {
-  font-size: 12px;
 }
 .objpill .pip {
   width: 9px;
@@ -4830,6 +4834,28 @@ button {
 }
 .objpill .lf {
   color: var(--gold);
+}
+.objpill .od,
+.objpill .lf {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.objpill .od::before,
+.objpill .lf::before {
+  content: "";
+  width: 9px;
+  height: 8px;
+  flex: none;
+  border: 1px solid currentColor;
+}
+.objpill .od::before {
+  box-shadow: inset 0 2px currentColor;
+}
+.objpill .lf::before {
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg);
 }
 .objpill .od.hot {
   color: var(--gold);
@@ -4959,8 +4985,12 @@ button {
     height: 36px;
   }
   .bb .nm {
-    font-size: 9.5px;
+    font-size: 11px;
     letter-spacing: -0.2px;
+  }
+  .bb[data-key^="u:"] {
+    flex-basis: max-content;
+    min-width: 34px;
   }
 }
 /* …and on 360–379 px phones too, just (9 × 35 + 8 × 3 ≤ 344) */
@@ -4971,9 +5001,6 @@ button {
   .bb .ic {
     width: 32px;
     height: 32px;
-  }
-  .bb .nm {
-    font-size: 9px;
   }
 }
 /* landscape phones under 400 px tall: the Base tab's nine buttons (five rows) fit the sidebar unscrolled */
@@ -5808,13 +5835,7 @@ button {
 .aar-placings li i.green { background: var(--side-green); }
 .aar-placings li i.purple { background: var(--side-purple); }
 
-/* ================================================ RA2-look chrome (pass) --- */
-/* Machined C&C-style chrome: brushed metal on dark slate, hard bevels, square
-   corners, recessed instrument windows. Paint only — every widget keeps its DOM
-   id, class and data source (src/ui/hud.ts, src/ui/powers.ts): the four tabs read
-   their same unit lists, #scrap/#rate stay the scrap counter, .pw-meter stays the
-   calldown credit fed by api.ctrl.powerMeter(), canvas#minimap stays the radar.
-   Semantic colours are untouched: --green is our own selection, --red the enemy. */
+/* ================================================ command deck --- */
 :root {
   --r: 5px;
   --panel: rgba(19, 23, 28, 0.9);
@@ -5822,8 +5843,21 @@ button {
   --line: rgba(151, 166, 181, 0.36);
   --line-hi: rgba(196, 210, 224, 0.55);
 }
+#hud {
+  --radar-size: 124px;
+  --sidebar-width: 208px;
+  --instrument-ink: #c5d1de;
+  --instrument-bg: #10161c;
+  --control-bg: linear-gradient(180deg, #313b46, #1d252d 55%, #151b22);
+}
+#hud :is(button, a):focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -3px;
+}
 .buildbar {
-  background: linear-gradient(180deg, #2b323a 0, #1c2228 10px, #171c21 45%, #12161a 100%);
+  background:
+    linear-gradient(180deg, #4a5661 0 2px, transparent 2px),
+    linear-gradient(180deg, #29323a, #1b222a 76px, #12171c);
   border-color: #05070a;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 0 1px rgba(126, 140, 155, 0.16), 0 6px 22px rgba(0, 0, 0, 0.55);
 }
@@ -5836,8 +5870,11 @@ button {
 }
 .res,
 .clock,
-.pw-meter {
-  background: #0a0e11;
+.pw-meter,
+.objpill,
+.versus,
+.bmeter {
+  background: var(--instrument-bg);
   border: 1px solid #3a444e;
   border-radius: 4px;
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), inset 0 -1px 0 rgba(255, 255, 255, 0.05);
@@ -5847,98 +5884,215 @@ button {
 .pw-meter {
   color: #ffd23f;
 }
+.res .rate {
+  margin-left: auto;
+  color: #d4bd82;
+}
+.clock:not(.fast, .held),
+.objpill {
+  color: var(--instrument-ink);
+}
+.round,
+.zb,
+.speed,
+.sq,
+.chip {
+  border-radius: var(--r);
+  background: var(--control-bg);
+}
+.round {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+}
+#btn-menu::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-inline: 4px solid currentColor;
+}
+#btn-mute::before {
+  content: "";
+  width: 12px;
+  height: 16px;
+  margin-right: 7px;
+  background: currentColor;
+  clip-path: polygon(0 31%, 40% 31%, 100% 0, 100% 100%, 40% 69%, 0 69%);
+}
+#btn-mute::after {
+  content: "";
+  position: absolute;
+  left: calc(50% + 1px);
+  width: 7px;
+  height: 11px;
+  border-right: 2px solid currentColor;
+  border-radius: 50%;
+}
+#btn-mute[aria-pressed="true"] {
+  color: var(--gold);
+}
+#btn-mute[aria-pressed="true"]::after {
+  content: "×";
+  width: auto;
+  height: auto;
+  border: 0;
+  font-size: 17px;
+  line-height: 1;
+}
+#hud :is(.round, .zb, .tab, .bb, .speed, .sq, .chip):active {
+  filter: brightness(0.85);
+}
+@media (hover: hover) {
+  #hud :is(.round, .zb, .tab, .bb, .speed, .sq, .chip):hover:not(:active) {
+    filter: brightness(1.18);
+  }
+}
 .minimap-wrap {
-  background: linear-gradient(180deg, #343c45, #1b2026 60%, #14181d);
+  background: linear-gradient(180deg, #384551, #202931 25%, #12181d);
   border: 1px solid #05070a;
   border-radius: 5px;
-  padding: 18px 4px 4px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 4px 16px rgba(0, 0, 0, 0.5);
+  padding: 20px 4px 4px;
+  box-shadow: inset 0 0 0 1px #4a5661, 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 .minimap-wrap::before {
   content: "RADAR";
   position: absolute;
-  top: 1px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 10px;
+  top: 3px;
+  left: 7px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 3px;
-  color: #9fb0c0;
+  line-height: 1;
+  letter-spacing: 1.5px;
+  color: var(--instrument-ink);
 }
-#minimap {
+.minimap-wrap::after {
+  inset: 20px 4px 4px;
   border-radius: 3px;
 }
 .tab {
-  background: linear-gradient(180deg, #333b44, #20262c 55%, #1a1f24);
+  min-width: 0;
+  min-height: 36px;
+  background: var(--control-bg);
   border: 1px solid #05070a;
   border-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(126, 140, 155, 0.14);
-  color: #cfd7df;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 1px rgba(126, 140, 155, 0.14);
+  color: var(--instrument-ink);
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.4px;
 }
 .tab.on {
-  color: #ffe9a8;
-  background: linear-gradient(180deg, #3a434e, #262d34);
-  border-color: #6b5b2c;
-  box-shadow: inset 0 2px 0 var(--gold), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  color: #fff0ba;
+  background: linear-gradient(180deg, #4a4130, #2d2922);
+  border-color: #88703a;
+  box-shadow: inset 0 -2px var(--gold);
 }
 .tab .tbadge {
   border-radius: 4px;
-}
-.bb {
-  background: linear-gradient(180deg, #242b33, #12171b 70%);
-  border: 1px solid #05070a;
-  border-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13);
+  color: #0c1722;
 }
 .selpanel {
+  background: var(--instrument-bg);
+  border-color: #4a5661;
   border-radius: 5px;
+}
+.selpanel .hint {
+  color: var(--instrument-ink);
+}
+
+@media (orientation: portrait) {
+  .topbar {
+    left: calc(max(8px, env(safe-area-inset-left)) + 98px);
+    right: calc(max(8px, env(safe-area-inset-right)) + var(--radar-size) + 17px);
+  }
+  .objpill {
+    min-height: 24px;
+    height: auto;
+    flex-wrap: wrap;
+    gap: 3px 6px;
+    padding-block: 3px;
+  }
+}
+@media (orientation: portrait) and (max-width: 420px) {
+  #hud {
+    --radar-size: 108px;
+  }
+}
+@media (orientation: portrait) and (max-width: 379px) {
+  #hud {
+    --radar-size: 94px;
+  }
 }
 
 @media (orientation: landscape) {
-  /* the sidebar grows to a machined column; the radar moves to its head */
+  #hud {
+    --radar-size: 112px;
+  }
   .buildbar {
-    width: calc(208px + env(safe-area-inset-right));
+    width: calc(var(--sidebar-width) + env(safe-area-inset-right));
     border-radius: 6px 0 0 6px;
-    padding-top: calc(max(6px, env(safe-area-inset-top)) + 158px);
+    padding-top: calc(max(6px, env(safe-area-inset-top)) + var(--radar-size) + 38px);
   }
   .minimap-wrap {
-    right: calc(env(safe-area-inset-right) + 45px);
+    right: calc(env(safe-area-inset-right) + (var(--sidebar-width) - var(--radar-size) - 10px) / 2);
     left: auto;
     top: max(6px, env(safe-area-inset-top));
     z-index: 6;
   }
-  /* no emoji font in some runtimes: the tabs carry their text labels here too.
-     2x2: four labels do not fit one row inside a 208 px column. */
   .tabs {
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
   .tab {
-    min-width: 0;
-    overflow: hidden;
     letter-spacing: 0.3px;
+    padding: 4px 6px;
+  }
+  .tab::after {
+    display: none;
   }
   .tab .tl2 {
     display: inline;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
-  .tab {
-    font-size: 12px;
-    padding: 4px 6px;
-    min-height: 34px;
-  }
-  .tab .ti {
-    font-size: 14px;
-  }
-  .card {
-    right: calc(222px + env(safe-area-inset-right));
+  .card,
+  .powers {
+    right: calc(var(--sidebar-width) + env(safe-area-inset-right) + 12px);
   }
   .topbar {
-    max-width: calc(100vw - 480px);
+    left: calc((100% - var(--sidebar-width) - env(safe-area-inset-right) + env(safe-area-inset-left)) / 2);
+    max-width: calc(100% - var(--sidebar-width) - env(safe-area-inset-right) - env(safe-area-inset-left) - 224px);
+  }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  #hud {
+    --sidebar-width: 184px;
+    --radar-size: 86px;
+  }
+  .buildbar {
+    padding-top: calc(max(6px, env(safe-area-inset-top)) + var(--radar-size) + 30px);
+  }
+}
+@media (orientation: landscape) and (max-height: 420px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .bb {
+    height: 56px;
+    padding-inline: 1px;
+  }
+  .bb .nm {
+    font-size: 10.5px;
+    letter-spacing: -0.2px;
+  }
+}
+@media (orientation: landscape) and (max-width: 700px) {
+  .topbar {
+    left: calc(max(8px, env(safe-area-inset-left)) + 102px);
+    right: calc(var(--sidebar-width) + env(safe-area-inset-right) + 12px);
+    max-width: none;
+    justify-content: flex-start;
+    transform: none;
   }
 }

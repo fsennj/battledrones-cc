@@ -110,7 +110,7 @@ export interface Hud {
   radio(msg: string, tone: string, x?: number, y?: number): void;
   /** A minimap ping; "inbound" is a bigger amber pulse for an approaching raid. */
   ping(x: number, y: number, kind?: "hit" | "inbound"): void;
-  /** A 💡 tip in the ticker right now (feedback to a tap), shown for `ms`; tapping it jumps to (x, y). */
+  /** A tip in the ticker right now (feedback to a tap), shown for `ms`; tapping it jumps to (x, y). */
   hint(msg: string, ms?: number, x?: number, y?: number): void;
   /**
    * A one-time onboarding hint, paced through the hint queue (src/game/hints.ts):
@@ -137,11 +137,11 @@ type DuelAsk = "resign" | "resign-leave" | "leave";
 /** The end screen's button that copies the match's battle record. */
 const COPY_REPLAY = "📋 Copy replay JSON";
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "build", label: "Base", icon: "🏗" },
-  { id: "ground", label: "Vehicles", icon: "⛓" },
-  { id: "infantry", label: "Infantry", icon: "🤖" },
-  { id: "air", label: "Aircraft", icon: "✈" }
+const TABS: { id: Tab; label: string }[] = [
+  { id: "build", label: "Base" },
+  { id: "ground", label: "Vehicles" },
+  { id: "infantry", label: "Infantry" },
+  { id: "air", label: "Aircraft" }
 ];
 
 const BUILDABLE: BuildingKind[] = ["fab-plant", "airpad", "assembly-bay", "tech-lab", "depot", "turret", "sam-site", "radar", "gantry"];
@@ -294,15 +294,15 @@ export function createHud(api: HudApi): Hud {
       <div class="opspill" id="opspill" hidden></div>
     </div>
     <div class="tl">
-      <button id="btn-menu" class="round" title="Pause (P)">❚❚</button>
-      <button id="btn-mute" class="round" title="Mute all (sound settings in the pause menu)">🔊</button>
+      <button id="btn-menu" class="round" aria-label="Pause" title="Pause (P)"></button>
+      <button id="btn-mute" class="round" aria-label="Mute all" title="Mute all (sound settings in the pause menu)"></button>
     </div>
     <div id="toasts" class="toasts"></div>
     <div id="banner" class="banner" hidden></div>
     <div class="minimap-wrap"><canvas id="minimap"></canvas></div>
     <div class="zoombtns">
-      <button id="zoom-in" class="zb" title="Zoom in (+)">＋</button>
-      <button id="zoom-out" class="zb" title="Zoom out (−)">−</button>
+      <button id="zoom-in" class="zb" aria-label="Zoom in" title="Zoom in (+)">+</button>
+      <button id="zoom-out" class="zb" aria-label="Zoom out" title="Zoom out (−)">−</button>
     </div>
     <div class="dock">
       <div class="ctx">
@@ -375,7 +375,7 @@ export function createHud(api: HudApi): Hud {
     const b = document.createElement("button");
     b.className = "tab";
     b.dataset.tab = t.id;
-    b.innerHTML = `<span class="ti">${t.icon}</span><span class="tl2">${t.label}</span><span class="tbadge" hidden></span>`;
+    b.innerHTML = `<span class="tl2">${t.label}</span><span class="tbadge" hidden></span>`;
     b.addEventListener("click", () => {
       sfx.play("click", 0.5);
       tab = t.id;
@@ -394,7 +394,7 @@ export function createHud(api: HudApi): Hud {
       <span class="cost">${cost}</span>
       <span class="badge" hidden></span>
       <span class="prog" hidden></span>
-      <span class="lock" hidden>🔒</span>`;
+      <span class="lock" role="img" aria-label="Locked" hidden></span>`;
     // long-press (touch) or right-click (mouse) opens the info card
     let timer = 0;
     let longFired = false;
@@ -478,7 +478,11 @@ export function createHud(api: HudApi): Hud {
     const keys =
       tab === "build" ? BUILDABLE.map((k) => `b:${k}`) : UNIT_TABS.find((t) => t.tab === tab)!.kinds.map((k) => `u:${k}`);
     for (const k of keys) gridEl.appendChild(buttons.get(k)!);
-    for (const el of tabsEl.children) (el as HTMLElement).classList.toggle("on", (el as HTMLElement).dataset.tab === tab);
+    for (const el of tabsEl.querySelectorAll<HTMLButtonElement>(".tab")) {
+      const selected = el.dataset.tab === tab;
+      el.classList.toggle("on", selected);
+      el.setAttribute("aria-pressed", String(selected));
+    }
     cardEl.hidden = true;
   }
   renderGrid();
@@ -812,7 +816,7 @@ export function createHud(api: HudApi): Hud {
     else t.classList.add("passive");
     toastsEl.appendChild(t);
     // the ticker keeps two lines at most: the newest pushes the oldest out (a
-    // waiting reader's 💡 hint outlives a burst of alerts)
+    // waiting reader's hint outlives a burst of alerts)
     while (toastsEl.children.length > 2) {
       const kids = [...toastsEl.children].filter((c) => c !== t);
       const old = kids.find((c) => c.classList.contains("out")) ?? kids.find((c) => !c.classList.contains("hint")) ?? kids[0];
@@ -943,7 +947,7 @@ export function createHud(api: HudApi): Hud {
 
   // --------------------------------------------------------- top buttons ---
   const muteBtn = $<HTMLButtonElement>("#btn-mute");
-  const syncMute = () => (muteBtn.textContent = sfx.muted ? "🔇" : "🔊");
+  const syncMute = () => muteBtn.setAttribute("aria-pressed", String(sfx.muted));
   syncMute();
   // one-tap master mute; the per-bus switches live in the pause menu
   const offMute = sfx.onChange(syncMute);
@@ -1098,7 +1102,7 @@ export function createHud(api: HudApi): Hud {
     const shown = hints.update(busy || api.ctrl.paused ? 0 : dt / 1000, quiet);
     if (shown) {
       const { x, y } = shown;
-      toast(`💡 ${shown.msg}`, x !== undefined && y !== undefined ? () => api.centerCamera(x, y) : undefined, "hint", shown.ms ?? HINTS.showMs);
+      toast(shown.msg, x !== undefined && y !== undefined ? () => api.centerCamera(x, y) : undefined, "hint", shown.ms ?? HINTS.showMs);
     }
     // (a duel's pause menu: Leave appears once the link is lost, "Resign and leave" while packets arrive)
     if (api.duel && api.ctrl.paused && duelShown && !duelShown.ask && duelShown.key !== exitsKey(api.duel)) renderDuelExits(api.duel, null);
@@ -1236,7 +1240,7 @@ export function createHud(api: HudApi): Hud {
       el.classList.toggle("ready", !!(pendingThis && p.ready));
       el.classList.toggle("placing", ctrl.placing === kind);
       lock.hidden = !blocked;
-      markBanned(lock, w, kind); // mutators: ⛔ instead of 🔒
+      markBanned(lock, w, kind);
       if (pendingThis && !p.ready) {
         prog.hidden = false;
         const total = BUILDINGS[kind].buildTime * TICK_RATE;
@@ -1269,7 +1273,7 @@ export function createHud(api: HudApi): Hud {
       el.classList.toggle("locked", !!blocked);
       el.classList.toggle("poor", view.scrap < cost);
       lock.hidden = !blocked;
-      markBanned(lock, w, kind); // mutators: ⛔ instead of 🔒
+      markBanned(lock, w, kind);
       badge.hidden = queued === 0;
       if (badge.textContent !== String(queued)) badge.textContent = String(queued);
       prog.hidden = headProg < 0;
@@ -1519,7 +1523,7 @@ export function createHud(api: HudApi): Hud {
       if (pings.length < 12 || kind === "inbound") pings.push({ x, y, t: api.matchSeconds(), kind });
     },
     hint(msg, ms = 7000, x, y) {
-      toast(`💡 ${msg}`, x !== undefined && y !== undefined ? () => api.centerCamera(x, y) : undefined, "hint", ms);
+      toast(msg, x !== undefined && y !== undefined ? () => api.centerCamera(x, y) : undefined, "hint", ms);
     },
     offerHint(h) {
       if (!api.ctrl.spectator) hints.offer(h);

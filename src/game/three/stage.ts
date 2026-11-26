@@ -33,24 +33,24 @@ interface Look {
 
 const LOOKS: Record<Biome, Look> = {
   temperate: {
-    bg: 0x0b100c, sky: 0xc6d8ff, ground: 0x6f7260, hemi: 0.6, sun: 0xfff0d8, sunI: 4.2, exposure: 1.0,
+    bg: 0x0b100c, sky: 0xbccfff, ground: 0x767764, hemi: 0.78, sun: 0xffeed0, sunI: 3.75, exposure: 1.0,
     fog: { shroud: 0x0b1219, wisp: 0x1c2a35, memory: [0.86, 0.96, 1.12], cloud: [1, 0.92, 0.8] }
   },
   desert: {
-    bg: 0x15110b, sky: 0xdde8ff, ground: 0xb09060, hemi: 0.58, sun: 0xffe6bf, sunI: 4.3, exposure: 0.98,
+    bg: 0x15110b, sky: 0xc7ddff, ground: 0xb09060, hemi: 0.75, sun: 0xffe4b8, sunI: 3.9, exposure: 0.98,
     fog: { shroud: 0x16130f, wisp: 0x342e27, memory: [1.06, 0.97, 0.84], cloud: [1, 0.9, 0.78] }
   },
   arctic: {
-    bg: 0x10161e, sky: 0xd8e8ff, ground: 0xa8b4c4, hemi: 0.56, sun: 0xeef4ff, sunI: 4.4, exposure: 0.95,
+    bg: 0x10161e, sky: 0xbaccff, ground: 0xa8b4c4, hemi: 0.76, sun: 0xf7f4ff, sunI: 3.7, exposure: 0.95,
     fog: { shroud: 0x0c1420, wisp: 0x21334a, memory: [0.88, 0.97, 1.14], cloud: [1, 0.9, 0.72] }
   },
   volcanic: {
-    bg: 0x120b0a, sky: 0xb0a0a8, ground: 0x6a3a24, hemi: 0.62, sun: 0xffd2b0, sunI: 4.2, exposure: 1.05,
+    bg: 0x120b0a, sky: 0xb1b8da, ground: 0x805643, hemi: 0.78, sun: 0xffd2b0, sunI: 3.85, exposure: 1.05,
     fog: { shroud: 0x141012, wisp: 0x302727, memory: [1.1, 0.94, 0.86], cloud: [1, 1, 1] }
   },
   // high noon over the reef: a white-gold sun, cool sea-glass bounce light, a night-ocean shroud
   tropical: {
-    bg: 0x05202b, sky: 0xc4ecff, ground: 0x9cc4b0, hemi: 0.62, sun: 0xfff6e2, sunI: 4.4, exposure: 0.95,
+    bg: 0x05202b, sky: 0xc4ecff, ground: 0x9cc4b0, hemi: 0.74, sun: 0xfff6e2, sunI: 3.9, exposure: 0.95,
     fog: { shroud: 0x061a20, wisp: 0x15363c, memory: [0.84, 1.0, 1.1], cloud: [1, 0.93, 0.8] }
   }
 };
@@ -175,7 +175,7 @@ export class Stage {
 
     const pmrem = new THREE.PMREMGenerator(r);
     this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-    this.scene.environmentIntensity = 0.12;
+    this.scene.environmentIntensity = 0.19;
     pmrem.dispose();
 
     this.software = isSoftwareGl(r);

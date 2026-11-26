@@ -4,11 +4,10 @@ import type { BuildingKind, UnitKind } from "../../sim/types";
 
 /**
  * Hand-built models from Blender (art/blender/*.py -> public/assets/models/*.glb) replace the
- * procedural ones, unit by unit and building by building. A GLB carries two nodes, "hull" and
- * "turret", with vertex colours only; the game's palette is recognised in them: blue team shades
- * are recoloured per faction, amber lights become glow. A GLB that fails to load leaves the
- * procedural model. Buildings carry a "hull" node only, authored at map scale (1 = one tile),
- * with the same envelope as the procedural one they replace.
+ * procedural ones, unit by unit and building by building. Each animated mesh is authored in
+ * local coordinates around its game pivot. The game places and animates it. Blue vertex
+ * colours are recoloured per faction and amber becomes glow. Missing meshes use the
+ * procedural geometry. Buildings are authored at map scale (1 = one tile).
  */
 
 interface Team {
@@ -20,14 +19,16 @@ interface Team {
 export interface GlbParts {
   hull: THREE.BufferGeometry;
   turret?: THREE.BufferGeometry;
+  ramp?: THREE.BufferGeometry;
+  rotor?: THREE.BufferGeometry;
 }
 
 const GLB_UNITS: Partial<Record<UnitKind, string>> = Object.fromEntries(
-  (["juggernaut", "stinger", "mastodon", "lancer", "harvester"] as UnitKind[]).map((k) => [k, `assets/models/${k}.glb`])
+  (["juggernaut", "stinger", "mastodon", "lancer", "harvester", "condor", "wasp", "raptor"] as UnitKind[]).map((k) => [k, `assets/models/${k}.glb`])
 );
-/** Buildings without moving parts, same trick; the map lists the ones built as GLBs so far. */
+/** Buildings with Blender geometry, including separately animated turret or radar heads. */
 const GLB_BUILDINGS: Partial<Record<BuildingKind, string>> = Object.fromEntries(
-  (["hq", "fab-plant", "depot"] as BuildingKind[]).map((k) => [k, `assets/models/${k}.glb`])
+  (["hq", "fab-plant", "depot", "airpad", "radar"] as BuildingKind[]).map((k) => [k, `assets/models/${k}.glb`])
 );
 const loaded = new Map<UnitKind | BuildingKind, GlbParts>();
 
@@ -104,8 +105,12 @@ export async function loadGlbModels(onLoaded: (kind: UnitKind | BuildingKind) =>
         };
         const hull = mesh("hull");
         if (!hull) throw new Error("no hull node");
-        const turret = mesh("turret");
-        loaded.set(kind, { hull: toGame(hull), turret: turret && toGame(turret) });
+        const parts: GlbParts = { hull: toGame(hull) };
+        for (const name of ["turret", "ramp", "rotor"] as const) {
+          const geometry = mesh(name);
+          if (geometry) parts[name] = toGame(geometry);
+        }
+        loaded.set(kind, parts);
         onLoaded(kind);
       } catch (e) {
         console.warn("glb model failed:", kind, e);

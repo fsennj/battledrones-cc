@@ -92,6 +92,8 @@ interface BiomeLook {
   steel: boolean;
   /** Ground grain contrast, the grain's north-west emboss, sharpening of the paint. */
   detail: [number, number, number];
+  /** Linear paint multipliers for RGB, followed by the amount of desaturation. */
+  grade: [number, number, number, number];
   stone: StoneLook;
 }
 
@@ -120,24 +122,29 @@ const ROCK_TINT_LUM = 0.5;
 const LOOK: Record<Biome, BiomeLook> = {
   temperate: {
     shallow: 0x4fa8b8, deep: 0x123f5c, liquid: 0, rock: 0x7c7b77, bridge: 0x8a7a64, steel: false, detail: [0.22, 2.6, 0.55],
+    grade: [0.88, 0.90, 0.76, 0.36],
     stone: { wall: 5, crag: 4, contrast: 1.5, lift: 1.15, foot: 0.35, rough: 0.75 }
   },
   desert: {
     shallow: 0x5fd8d0, deep: 0x147a8a, liquid: 0, rock: 0xa45a3a, bridge: 0x9a8058, steel: false, detail: [0.2, 3.4, 0.7],
+    grade: [0.94, 0.85, 0.76, 0.26],
     stone: { wall: 4.5, crag: 4, contrast: 2.0, lift: 1.15, foot: 0.35, rough: 0.75 }
   },
   arctic: {
     shallow: 0x9fd0ea, deep: 0x0f2a44, liquid: 2, rock: 0x8a929e, bridge: 0x7c8590, steel: false, detail: [0.08, 1.8, 0.45],
+    grade: [0.83, 0.90, 0.95, 0.25],
     stone: { wall: 5, crag: 4, contrast: 1.15, lift: 0.8, foot: 0.35, rough: 0.7 }
   },
   volcanic: {
     shallow: 0xffd060, deep: 0xff4a10, liquid: 1, rock: 0x2e2b2a, bridge: 0x6c6660, steel: true, detail: [0.22, 2.6, 0.55],
+    grade: [0.89, 0.80, 0.78, 0.42],
     stone: { wall: 5, crag: 4, contrast: 1.8, lift: 0.85, foot: 0.35, rough: 0.45 }
   },
   // turquoise lagoons over coral sand, falling away past the reef into sapphire open sea
   tropical: {
     shallow: 0x46e0d2, deep: 0x0b6f86, abyss: 0x062a48, farSea: true, liquid: 0, rock: 0xb4b0a2, bridge: 0x8a735a, steel: false,
     detail: [0.2, 2.8, 0.6],
+    grade: [0.94, 0.94, 0.82, 0.28],
     stone: { wall: 4.5, crag: 3.5, contrast: 1.4, lift: 1.2, foot: 0.5, rough: 0.85 }
   }
 };
@@ -398,6 +405,7 @@ export class Terrain3D {
     const uniforms: GroundUniforms = {
       ...this.edge,
       uDetail: { value: new THREE.Vector3(...L.detail) },
+      uGroundGrade: { value: new THREE.Vector4(...L.grade) },
       uFarGround: { value: this.look.farSea ? new THREE.Color(this.look.abyss ?? this.look.deep) : this.openGround(painted) }
     };
     const walls = this.stone?.walls ?? null;
@@ -414,7 +422,7 @@ export class Terrain3D {
     // one mesh per painted chunk: its own cells, plus the near-skirt cells that mirror into it
     // (so its bounds grow only by the skirt nearby, and it still culls)
     interface Acc {
-      idx: number[]; pos: number[]; nor: number[]; uv: number[]; col: number[]; stone: number[]; steep: number[];
+      idx: number[]; pos: number[]; nor: number[]; uv: number[]; col: number[]; stone: number[]; steep: number[]; shade: number[];
       tex: THREE.Texture | null; x0: number; z0: number; w: number; h: number;
     }
     const accs: Acc[] = [];
@@ -423,14 +431,14 @@ export class Terrain3D {
         const tex = art?.chunks[r]?.[c] ?? null;
         const img = tex?.image as { width: number; height: number } | undefined;
         accs.push({
-          idx: [], pos: [], nor: [], uv: [], col: [], stone: [], steep: [], tex, x0: c * size, z0: r * size,
+          idx: [], pos: [], nor: [], uv: [], col: [], stone: [], steep: [], shade: [], tex, x0: c * size, z0: r * size,
           w: img?.width ?? 1, h: img?.height ?? 1
         });
       }
     const st = new Float32Array(5);
-    // heights and normals per grid point, worked out once however many meshes share the point
+    // Heights, normals and contact shade per grid point, shared by adjoining chunks.
     const NV = NX * zs.length;
-    const hgt = new Float32Array(NV * 4).fill(NaN);
+    const samples = new Float32Array(NV * 5).fill(NaN);
     // each grid point's vertex in the mesh that last used it (a point on a mesh boundary is simply repeated)
     const slot = new Int32Array(NV);
     const owner = new Int32Array(NV).fill(-1);
@@ -444,21 +452,31 @@ export class Terrain3D {
       slot[key] = k;
       const x = xs[i]!;
       const z = zs[j]!;
-      if (Number.isNaN(hgt[key * 4])) {
+      const p = key * 5;
+      if (Number.isNaN(samples[p])) {
         const dx = this.landAt(x + e, z) - this.landAt(x - e, z);
         const dz = this.landAt(x, z + e) - this.landAt(x, z - e);
         const inv = 1 / Math.hypot(dx / (2 * e), 1, dz / (2 * e));
-        hgt[key * 4] = this.landAt(x, z);
-        hgt[key * 4 + 1] = (-dx / (2 * e)) * inv;
-        hgt[key * 4 + 2] = inv;
-        hgt[key * 4 + 3] = (-dz / (2 * e)) * inv;
+        const h = this.landAt(x, z);
+        samples[p] = h;
+        samples[p + 1] = (-dx / (2 * e)) * inv;
+        samples[p + 2] = inv;
+        samples[p + 3] = (-dz / (2 * e)) * inv;
+        // Shade the ground below a nearby cliff lip, including when shadow maps are off.
+        let shade = 0;
+        if (h >= WATER_LEVEL && h < 0.46) {
+          const rise = Math.max(this.landAt(x - 0.54, z), this.landAt(x + 0.54, z), this.landAt(x, z - 0.54), this.landAt(x, z + 0.54)) - h;
+          shade = Math.min(0.26, Math.max(0, rise - 0.17) * 0.55) * (1 - Math.max(0, h) / 0.46);
+        }
+        samples[p + 4] = shade;
       }
-      a.pos.push(x, hgt[key * 4]!, z);
-      a.nor.push(hgt[key * 4 + 1]!, hgt[key * 4 + 2]!, hgt[key * 4 + 3]!);
+      a.pos.push(x, samples[p]!, z);
+      a.nor.push(samples[p + 1]!, samples[p + 2]!, samples[p + 3]!);
+      a.shade.push(samples[p + 4]!);
       const sx = mirror(x, this.W);
       const sz = mirror(z, this.H);
       if (walls) {
-        this.stoneAt(sx, sz, hgt[key * 4 + 1]!, hgt[key * 4 + 3]!, st);
+        this.stoneAt(sx, sz, samples[p + 1]!, samples[p + 3]!, st);
         a.stone.push(st[0]!, st[1]!, st[2]!, st[3]!);
         a.steep.push(st[4]!);
       }
@@ -506,6 +524,7 @@ export class Terrain3D {
       const g = new THREE.BufferGeometry();
       g.setAttribute("position", new THREE.Float32BufferAttribute(a.pos, 3));
       g.setAttribute("normal", new THREE.Float32BufferAttribute(a.nor, 3));
+      g.setAttribute("aContactShade", new THREE.Float32BufferAttribute(a.shade, 1));
       if (a.tex) g.setAttribute("uv", new THREE.Float32BufferAttribute(a.uv, 2));
       else g.setAttribute("color", new THREE.Float32BufferAttribute(a.col, 3));
       if (walls) {
@@ -530,6 +549,7 @@ export class Terrain3D {
       const g = new THREE.BufferGeometry();
       g.setAttribute("position", new THREE.Float32BufferAttribute([x0, 0, z0, x1, 0, z0, x0, 0, z1, x1, 0, z1], 3));
       g.setAttribute("normal", new THREE.Float32BufferAttribute([0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0], 3));
+      g.setAttribute("aContactShade", new THREE.Float32BufferAttribute(new Float32Array(4), 1));
       if (fa.tex) g.setAttribute("uv", new THREE.Float32BufferAttribute([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5], 2));
       else g.setAttribute("color", new THREE.Float32BufferAttribute(new Array(12).fill(1), 3));
       if (walls) {
