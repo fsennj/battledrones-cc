@@ -12,6 +12,8 @@ game's own replay check is the proof: on this tree it still ends on the same wor
 
 Before/after renders and the numbers measured from them: [`cc-look/`](cc-look/).
 
+[Stahltrieb music demos and listening review / Musikproben und Hörabnahme](art/xr/sound/music/README.md)
+
 ## The six commits
 
 | Commit | What it does |

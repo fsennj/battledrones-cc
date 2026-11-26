@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="de-AT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stahltrieb · Musik-Hörabnahme</title>
+  <link rel="stylesheet" href="/review.css">
+  <script type="module" src="/review.js"></script>
+</head>
+<body>
+  <main>
+    <header class="masthead">
+      <div>
+        <p class="eyebrow" data-text="review">Musik-Hörabnahme</p>
+        <h1>Stahltrieb</h1>
+      </div>
+      <div class="header-actions">
+        <label class="language"><span data-text="language">Sprache</span>
+          <select id="language"><option value="de">Deutsch</option><option value="en">English</option></select>
+        </label>
+        <a class="button" href="/api/selection" download data-text="export">Auswahl exportieren</a>
+      </div>
+    </header>
+
+    <section class="player" aria-labelledby="player-title">
+      <div>
+        <p class="eyebrow" data-text="player">Wiedergabe</p>
+        <h2 id="player-title" data-text="emptyPlayer">Titel zum Anhören wählen</h2>
+      </div>
+      <audio id="audio" controls preload="none" aria-labelledby="player-title"></audio>
+    </section>
+
+    <section class="catalogue" aria-label="Titel" id="catalogue">
+      <div class="toolbar">
+        <nav class="groups" id="groups" aria-label="Fassung">
+          <button type="button" data-group="serious" aria-pressed="true"></button>
+          <button type="button" data-group="fun" aria-pressed="false"></button>
+        </nav>
+        <div class="filters">
+          <label><span data-text="show">Anzeigen</span>
+            <select id="filter">
+              <option value="all" data-text="all">Alle Titel</option>
+              <option value="unrated" data-text="unrated">Ohne Wertung</option>
+              <option value="selected" data-text="selectedOnly">Spielauswahl</option>
+            </select>
+          </label>
+          <label><span data-text="sort">Sortieren</span>
+            <select id="sort">
+              <option value="album" data-text="albumOrder">Albumreihenfolge</option>
+              <option value="rating" data-text="topRated">Beste Wertung</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <p class="summary" id="summary" aria-live="polite"></p>
+      <ul id="tracks"></ul>
+      <nav class="pagination" id="pagination" aria-label="Seiten">
+        <button type="button" id="previous" data-text="previous">Zurück</button>
+        <span id="position" aria-live="polite"></span>
+        <button type="button" id="next" data-text="next">Weiter</button>
+      </nav>
+      <p id="feedback" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+</body>
+</html>

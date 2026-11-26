@@ -14,3 +14,5 @@ battles/*
 *.egg-info/
 .pytest_cache/
 llm-tools-battledrones/uv.lock
+
+.xr-music-review/
