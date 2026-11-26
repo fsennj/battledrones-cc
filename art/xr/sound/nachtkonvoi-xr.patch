@@ -1,0 +1,350 @@
+diff --git a/src/xr/main.ts b/src/xr/main.ts
+index 6dceb88..6988f81 100644
+--- a/src/xr/main.ts
++++ b/src/xr/main.ts
+@@ -57,6 +57,7 @@ const requestedMap = new URLSearchParams(location.search).get("map") ?? "";
+ const isBev = requestedMap === "bev";
+ const bevId = isBev ? new URLSearchParams(location.search).get("karte") ?? "" : "";
+ const region = isTirolRegion(requestedMap) ? requestedMap : null;
++const nachtMix = region === "zillertal" && new URLSearchParams(location.search).get("ton") === "nachtkonvoi";
+ const draftRequested = !!region && new URLSearchParams(location.search).get("entwurf") === "1";
+ const isAtlas = requestedMap === "gesamt-tirol";
+ const achenseeMission = region === "achensee" ? new URLSearchParams(location.search).get("mission") : null;
+@@ -312,8 +313,56 @@ async function start() {
+     });
+     renderer.xr.addEventListener("sessionend", () => { expedition.setImmersive(false); expedition.save(); });
+   }
+-  const audio = new TableAudio(region);
+-  const voices = new TableVoices();
++  const audio = new TableAudio(region, nachtMix);
++  const voices = new TableVoices(nachtMix ? (active) => audio.setSpeech(active) : undefined);
++  let radioTimer: number | undefined;
++  let radioBroadcast: Promise<void> | undefined;
++  function broadcastRadio(): void {
++    if (nachtMix) {
++      window.clearTimeout(radioTimer);
++      if (radioBroadcast) return;
++    }
++    audio.play("radio");
++    const playback = voices.speak("relay.radio");
++    if (nachtMix) {
++      radioBroadcast = playback;
++      void playback.finally(() => { if (radioBroadcast === playback) radioBroadcast = undefined; });
++    }
++  }
++  function reportCompletion(): void {
++    const report = () => {
++      if (document.hidden) return;
++      audio.play(region === "zillertal" ? "radio" : "checkpoint");
++      if (!investigation) void voices.speak("command.complete");
++    };
++    if (!nachtMix) { report(); return; }
++    window.clearTimeout(radioTimer);
++    if (radioBroadcast) void radioBroadcast.then(report);
++    else report();
++  }
++  if (nachtMix) {
++    const radioTest = document.createElement("button");
++    radioTest.id = "nachtkonvoi-radio-test";
++    radioTest.type = "button";
++    bindXrText(radioTest, () => tr("Nachtkonvoi · Funkprobe im Flug", "Nachtkonvoi · In-flight radio test"));
++    radioTest.onclick = async () => {
++      sfx.unlock();
++      window.clearTimeout(radioTimer);
++      radioTest.disabled = true;
++      await radioBroadcast;
++      await audio.prepareSoundtrack();
++      radioTest.disabled = false;
++      if (document.hidden) return;
++      const unit = [...world.units.values()].find(candidate => candidate.kind === "wasp" && candidate.faction === "blue");
++      const point = mission?.target;
++      if (unit && point) {
++        selectById(unit.id);
++        activate({ unit: null, point: new THREE.Vector3(point.x, heightAt(point.x, point.y), point.y) });
++      }
++      radioTimer = window.setTimeout(broadcastRadio, 1250);
++    };
++    muteAudio.before(radioTest);
++  }
+   const investigation = tirol && region === "reutte"
+     ? openReutteCase(tirol, table, () => { void voices.speak("command.complete"); }) : null;
+   if (investigation) {
+@@ -339,6 +388,7 @@ async function start() {
+   syncVoices();
+   sfx.unlockOnGesture();
+   function resetAudio(): void {
++    window.clearTimeout(radioTimer);
+     audio.reset();
+     voices.stop();
+   }
+@@ -1321,9 +1371,9 @@ async function start() {
+       if (mission?.update()) {
+         if (flyToSurveyPoint) flyToSurveyPoint.disabled = !mission.target;
+         if (audioVisible) {
+-          audio.play(region === "zillertal" ? "radio" : "checkpoint");
+-          if (!mission.target && !investigation) void voices.speak("command.complete");
+-          else if (region === "zillertal") void voices.speak("relay.radio");
++          if (!mission.target) reportCompletion();
++          else if (region === "zillertal") broadcastRadio();
++          else audio.play("checkpoint");
+         }
+         if (floodExercise) hydro?.update(mission.completed);
+         investigation?.found(mission.completed);
+@@ -1523,7 +1573,8 @@ async function start() {
+     if (tunnelCameraActive && tunnelFollow) renderer.render(tunnelFollow.scene, tunnelFollow.camera);
+     else renderer.render(scene, camera);
+     if (!audioVisible) return;
+-    const source = selected === null || flightSpeed === 0 ? null : table.unitWorldPosition(selected, flightPosition);
++    const hover = nachtMix && selected !== null && world.units.get(selected)?.kind === "wasp";
++    const source = selected === null || flightSpeed === 0 && !hover ? null : table.unitWorldPosition(selected, flightPosition);
+     audio.update(source, flightSpeed, spatial ? renderer.xr.getCamera() : camera, spatial);
+   });
+ 
+diff --git a/src/xr/nachtkonvoi.ts b/src/xr/nachtkonvoi.ts
+new file mode 100644
+index 0000000..a3f2a84
+--- /dev/null
++++ b/src/xr/nachtkonvoi.ts
+@@ -0,0 +1,56 @@
++import type { AudioEngine } from "../game/audio";
++
++const trackUrl = new URL("../../art/xr/sound/music/stahltrieb/langfassungen/08-nachtkonvoi.mp3", import.meta.url).href;
++const musicLevel = 0.32;
++const speechLevel = musicLevel * 10 ** (-10 / 20);
++
++/** Opt-in Zillertal soundtrack, on the same Music bus as the table ambience. */
++export class Nachtkonvoi {
++  private pending: Promise<void> | undefined;
++  private buffer: AudioBuffer | undefined;
++  private playback: { source: AudioBufferSourceNode; level: GainNode } | undefined;
++  private speaking = false;
++
++  prepare(ctx: AudioContext): Promise<void> {
++    return this.pending ??= fetch(trackUrl).then((response) => {
++      if (!response.ok) throw new Error(`Nachtkonvoi HTTP ${response.status}`);
++      return response.arrayBuffer();
++    }).then((bytes) => ctx.decodeAudioData(bytes)).then((buffer) => {
++      this.buffer = buffer;
++    }).catch((error: unknown) => { console.warn("Nachtkonvoi:", error); });
++  }
++
++  update({ ctx, musicIn }: AudioEngine): void {
++    if (!this.buffer) {
++      void this.prepare(ctx);
++      return;
++    }
++    if (this.playback) return;
++    const source = ctx.createBufferSource();
++    source.buffer = this.buffer;
++    source.loop = true;
++    const level = ctx.createGain();
++    level.gain.value = 0;
++    source.connect(level).connect(musicIn);
++    this.playback = { source, level };
++    this.setSpeech(this.speaking);
++    source.start();
++  }
++
++  setSpeech(active: boolean): void {
++    this.speaking = active;
++    if (!this.playback) return;
++    const { level } = this.playback;
++    const now = level.context.currentTime;
++    level.gain.cancelAndHoldAtTime(now);
++    level.gain.setTargetAtTime(active ? speechLevel : musicLevel, now, active ? 0.035 : 0.18);
++  }
++
++  stop(): void {
++    if (!this.playback) return;
++    const { source, level } = this.playback;
++    source.stop();
++    level.disconnect();
++    this.playback = undefined;
++  }
++}
+diff --git a/src/xr/table-audio.ts b/src/xr/table-audio.ts
+index 883ff83..ecf1e08 100644
+--- a/src/xr/table-audio.ts
++++ b/src/xr/table-audio.ts
+@@ -1,6 +1,7 @@
+ import { Quaternion, Vector3, type Camera } from "three";
+ import { sfx, type AudioEngine } from "../game/audio";
+ import type { TirolRegion } from "./tirol-missions";
++import { Nachtkonvoi } from "./nachtkonvoi";
+ 
+ type Tone = readonly [delay: number, length: number, frequency: number, level: number, harmonic: number];
+ type Cue = "selection" | "destination" | "radio" | "checkpoint";
+@@ -94,7 +95,7 @@ function smooth(param: AudioParam, value: number, now: number, smoothing = 0.025
+   param.setTargetAtTime(value, now, smoothing);
+ }
+ 
+-function flightVoice({ ctx, sfxIn }: AudioEngine, spatial: boolean) {
++function flightVoice({ ctx, sfxIn }: AudioEngine, spatial: boolean, speechFocus: boolean | undefined) {
+   const motor = ctx.createOscillator();
+   motor.frequency.value = 115;
+   motor.setPeriodicWave(ctx.createPeriodicWave(new Float32Array(5),
+@@ -108,16 +109,30 @@ function flightVoice({ ctx, sfxIn }: AudioEngine, spatial: boolean) {
+   const level = ctx.createGain();
+   level.gain.value = 0;
+   const panner = spatial ? ctx.createPanner() : ctx.createStereoPanner();
++  let voiceFocus: ((active: boolean) => void) | undefined;
+   if (panner instanceof PannerNode) {
+     panner.panningModel = "HRTF";
+     panner.refDistance = 0.75;
+   }
+   pulse.connect(pulseDepth).connect(texture.gain);
+-  motor.connect(texture).connect(level).connect(panner).connect(sfxIn);
++  motor.connect(texture).connect(level);
++  if (speechFocus === undefined) level.connect(panner);
++  else {
++    const shelf = filter(ctx, "highshelf", 300);
++    const presence = ctx.createGain();
++    level.connect(shelf).connect(presence).connect(panner);
++    const setSpeech = (active: boolean) => {
++      smooth(shelf.gain, active ? -5 : 0, ctx.currentTime, 0.05);
++      smooth(presence.gain, active ? 0.84 : 1, ctx.currentTime, 0.05);
++    };
++    setSpeech(speechFocus);
++    voiceFocus = setSpeech;
++  }
++  panner.connect(sfxIn);
+   motor.start();
+   pulse.start();
+   return {
+-    motor, level, panner, spatial,
++    motor, level, panner, spatial, setSpeech: voiceFocus,
+     stop() {
+       motor.stop();
+       pulse.stop();
+@@ -135,14 +150,29 @@ export class TableAudio {
+   private readonly direction = new Vector3();
+   private readonly up = new Vector3();
+   private readonly rotation = new Quaternion();
++  private readonly soundtrack: Nachtkonvoi | undefined;
++  private speaking = false;
+ 
+-  constructor(private readonly region: TirolRegion | null) {
++  constructor(private readonly region: TirolRegion | null, testMix = false) {
++    this.soundtrack = testMix ? new Nachtkonvoi() : undefined;
+     sfx.onChange(() => {
+       if (!sfx.enabled("sfx")) this.stopEffects();
+-      if (!sfx.enabled("music")) this.clearAmbience();
++      if (!sfx.enabled("music")) { this.clearAmbience(); this.soundtrack?.stop(); }
+     });
+   }
+ 
++  setSpeech(active: boolean): void {
++    if (!this.soundtrack) return;
++    this.speaking = active;
++    this.soundtrack.setSpeech(active);
++    this.flight?.setSpeech?.(active);
++  }
++
++  async prepareSoundtrack(): Promise<void> {
++    const engine = sfx.engine;
++    if (engine && sfx.enabled("music")) await this.soundtrack?.prepare(engine.ctx);
++  }
++
+   play(cue: Cue): void {
+     const engine = sfx.engine;
+     if (!engine || !sfx.enabled("sfx") || document.hidden) return;
+@@ -152,6 +182,9 @@ export class TableAudio {
+       this.cueOut.connect(sfxIn);
+     }
+     const now = ctx.currentTime;
++    if (this.soundtrack && (cue === "selection" || cue === "destination" || cue === "radio")) {
++      sfx.duck(5, cue === "radio" ? 0.55 : 0.3);
++    }
+     for (const note of tones[cue]) tone(ctx, this.cueOut, now, note);
+     if (cue === "radio") {
+       squelch(engine, this.cueOut, now, 0.085);
+@@ -162,6 +195,7 @@ export class TableAudio {
+   update(source: Vector3 | null, speed: number, camera: Camera, spatial: boolean): void {
+     const engine = sfx.engine;
+     if (!engine || engine.ctx.state !== "running" || document.hidden) return;
++    if (sfx.enabled("music")) this.soundtrack?.update(engine);
+     if (!this.stopAmbience && this.region && sfx.enabled("music")) {
+       const profile = atmosphere[this.region];
+       const air = atmosphereLayer(engine, 110, 520, profile.air, profile.gust, 0.55, -0.28, 0);
+@@ -171,7 +205,9 @@ export class TableAudio {
+     }
+     if (!sfx.enabled("sfx")) return;
+     const now = engine.ctx.currentTime;
+-    if (!source || speed < 0.02) {
++    // Keep a moving Wasp's motor at hover power through the end of a test transmission.
++    const hoverForSpeech = this.soundtrack && this.speaking && this.flight;
++    if (!source || speed < 0.02 && !hoverForSpeech) {
+       if (!this.flight) return;
+       if (this.flightIdleSince === undefined) {
+         this.flightIdleSince = now;
+@@ -183,9 +219,10 @@ export class TableAudio {
+     }
+     if (this.flight && this.flight.spatial !== spatial) this.clearFlight();
+     this.flightIdleSince = undefined;
+-    const flight = this.flight ??= flightVoice(engine, spatial);
+-    smooth(flight.motor.frequency, 115 + 55 * speed, now);
+-    smooth(flight.level.gain, 0.11 * speed, now, 0.055);
++    const flight = this.flight ??= flightVoice(engine, spatial, this.soundtrack ? this.speaking : undefined);
++    const motorSpeed = hoverForSpeech ? Math.max(speed, 0.36) : speed;
++    smooth(flight.motor.frequency, 115 + 55 * motorSpeed, now);
++    smooth(flight.level.gain, 0.11 * motorSpeed, now, 0.055);
+     if (flight.panner instanceof PannerNode) {
+       smooth(flight.panner.positionX, source.x, now);
+       smooth(flight.panner.positionY, source.y, now);
+@@ -200,6 +237,7 @@ export class TableAudio {
+   reset(): void {
+     this.stopEffects();
+     this.clearAmbience();
++    this.soundtrack?.stop();
+   }
+ 
+   private moveListener(listener: AudioListener, camera: Camera): void {
+diff --git a/src/xr/table-voices.ts b/src/xr/table-voices.ts
+index 7d643c0..a05f608 100644
+--- a/src/xr/table-voices.ts
++++ b/src/xr/table-voices.ts
+@@ -30,7 +30,7 @@ export class TableVoices {
+   private request = 0;
+   private readonly buffers = new Map<string, Promise<AudioBuffer | undefined>>();
+ 
+-  constructor() {
++  constructor(private readonly speechActive?: (active: boolean) => void) {
+     sfx.onChange(() => {
+       if (!sfx.enabled("voice")) this.stop();
+     });
+@@ -78,18 +78,29 @@ export class TableVoices {
+     const level = ctx.createGain();
+     level.gain.value = 0.68;
+     source.connect(level).connect(voiceIn);
+-    source.addEventListener("ended", () => {
+-      if (this.active === source) this.active = undefined;
+-      level.disconnect();
+-    }, { once: true });
++    const ended = new Promise<void>((resolve) => {
++      source.addEventListener("ended", () => {
++        if (this.active === source) {
++          this.active = undefined;
++          this.speechActive?.(false);
++        }
++        level.disconnect();
++        resolve();
++      }, { once: true });
++    });
+     this.active = source;
+     source.start();
++    this.speechActive?.(true);
++    await ended;
+   }
+ 
+   stop(): void {
+     this.request++;
+-    this.active?.stop();
+-    this.active?.disconnect();
++    const source = this.active;
++    if (!source) return;
+     this.active = undefined;
++    source.stop();
++    source.disconnect();
++    this.speechActive?.(false);
+   }
+ }

@@ -16,6 +16,14 @@ Das ist ein erster Arbeitsstand. Musikalisch gibt es noch sehr viel aufzuholen, 
 
 Im Projektordner mit Node.js `node tools/xr-music-review.mjs` ausführen und [die Hörabnahme öffnen](http://127.0.0.1:5193/). Über **Ernst** und **Tirol-Fun** wechselst du die Liste. **Beste Wertung** sortiert nach Sternen. Mit **Fürs Spiel** markierst du Titel. **Auswahl exportieren** lädt die markierten Stücke samt Wertung und Dateipfad als `stahltrieb-auswahl.json`. Der Server speichert Wertungen lokal in `.xr-music-review/ratings.json`. Die Vormerkung dient der späteren Spielmischung und Freigabe.
 
+### Nachtkonvoi im XR-Tisch testen
+
+Die [27-Sekunden-Hörprobe](../ton-1-nachtkonvoi.wav) verbindet Musik, Briefing-Stellvertreter, Auswahl, Zielbestätigung, Wasp-Motor, Funk und Abschlussmeldung. Der [XR-Patch](../nachtkonvoi-xr.patch) enthält die Live-Mischung, den Schutz vor einem doppelten Funkstart am Wegpunkt und den leiseren Schwebeflugpegel bis zum Ende der Meldung. Der [Audio-Smoke-Test](../../../../tools/xr-audio-smoke.mjs) verwendet für den Wasp-Klick jetzt die tatsächliche Kamera und Canvas-Fläche.
+
+Der Chrome-Link benötigt den lokalen XR-Checkout mit angewendetem Patch und der [Nachtkonvoi-MP3](stahltrieb/langfassungen/08-nachtkonvoi.mp3) im gleichen Projektpfad. Für einen XR-Checkout vor der Integration zuerst `git apply --check <Pfad-zum-Patch>` ausführen und danach den Patch mit `git apply <Pfad-zum-Patch>` anwenden. Vite im XR-Checkout mit `npm run dev` starten. In der [Zillertal-Testszene in Chrome](http://127.0.0.1:5173/xr.html?map=zillertal&ton=nachtkonvoi) auf **Nachtkonvoi · Funkprobe im Flug** klicken.
+
+Im normalen Chrome wurden alle drei Funkstationen bis „Mission abgeschlossen“ geprüft. Der Desktop-Audio-Smoke inklusive Wasp-Klick und Funküberlagerung bestand in 72,39 s, der TypeScript-Check ebenfalls. Die erste Funkmeldung lief einmal vollständig über 3,62 s. Im gemessenen Überlappungsfenster lag sie rund 10,1 dB über dem Motor. Whisper large-v3 erkannte aus dem gemischten Spielausgang den vollständigen Satz „Funküberprüfung erledigt. Empfang ist klar.“ Die persönliche Hörfreigabe auf Lautsprechern und im Headset steht aus.
+
 ### Produktion und Prüfstand
 
 1. **Entwurf mit Codex.** Aus dem Sounddesign-Briefing entstanden eigene Instrumentalbeschreibungen, Titel, Tempi und Arrangements. Die ernste Fassung verwendet Industrial Rock, Groove Metal und Breakbeats. Tirol-Fun setzt unter anderem Steirische Harmonika, Hackbrett und Maultrommel im Arrangement ein. Als Eingabe für die Musikgenerierung dienten Textbeschreibungen und Seeds.
@@ -36,6 +44,14 @@ This is an early working draft. There is still a lot of ground to make up, espec
 | [Browser review](../../../../tools/xr-music-review.mjs) | Listen to full tracks, give each 1–5 stars and shortlist tracks for the game. |
 
 Run `node tools/xr-music-review.mjs` with Node.js from the checkout and [open the review](http://127.0.0.1:5193/). Switch between **Serious** and **Tyrolean fun**. Use **Highest rated** to sort by stars and **For the game** to shortlist a track. **Export selection** downloads the selected tracks, ratings and asset paths as `stahltrieb-auswahl.json`. The server saves ratings locally in `.xr-music-review/ratings.json`. The shortlist is for the subsequent in-game mix and approval.
+
+### Test Nachtkonvoi on the XR tabletop
+
+The [27-second preview](../ton-1-nachtkonvoi.wav) combines the score, a briefing stand-in, selection and destination cues, the Wasp engine, radio and the completion report. The [XR patch](../nachtkonvoi-xr.patch) contains the live mix, prevents waypoint arrival from restarting a radio line, and keeps the motor at quiet hover power until the line ends. The [audio smoke test](../../../../tools/xr-audio-smoke.mjs) now uses the actual camera and canvas to click the Wasp.
+
+The Chrome link requires the local XR checkout with the patch applied and the [Nachtkonvoi MP3](stahltrieb/langfassungen/08-nachtkonvoi.mp3) at the same project path. On a pre-integration XR checkout, run `git apply --check <path-to-patch>` followed by `git apply <path-to-patch>`. Start Vite in the XR checkout with `npm run dev`. In the [Zillertal Chrome test scene](http://127.0.0.1:5173/xr.html?map=zillertal&ton=nachtkonvoi), click **Nachtkonvoi · In-flight radio test**.
+
+The regular Chrome tab reached all three radio stations and completed the mission. The desktop audio smoke test, including Wasp selection and the radio overlap, passed in 72.39 s. TypeScript also passed. The first line played once for the full 3.62 s. During the measured overlap, speech was about 10.1 dB above the engine. Whisper large-v3 transcribed the entire line from the mixed game output. Personal listening review on speakers and in the headset is pending.
 
 ### Production and verification
 
