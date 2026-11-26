@@ -901,7 +901,7 @@ export class BattleCallouts {
       const at = { x: ev.x, y: ev.y };
       if (h.spectator) this.say({ key, text: `${SIDE[f]} Goliath: ${what} down`, priority: 2, tone: "info", ...at, caption: true }, t);
       else if (mine && down) this.say({ key, text: `Goliath ${what} offline`, priority: 1, tone: "bad", ...at, caption: true }, t);
-      else if (mine) this.say({ key, text: `Goliath ${what} back online`, priority: 3, tone: "good", ...at, caption: !h.onScreen(ev.x, ev.y) }, t);
+      else if (mine) this.say({ key, text: `Goliath ${what} back online`, priority: 3, tone: "good", ...at, caption: true }, t);
       else if (down) this.say({ key, text: `Enemy Goliath: ${what} down!`, priority: 2, tone: "good", ...at, caption: true }, t);
       else this.say({ key, text: `Enemy Goliath ${what} back online`, priority: 2, tone: "bad", ...at, caption: true }, t);
     }

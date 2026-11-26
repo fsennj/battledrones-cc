@@ -10,10 +10,11 @@ import * as THREE from "three";
 
 export const FOV = 12;
 /** Pitch (degrees below the horizon) zoomed all the way out / all the way in. */
-const PITCH_FAR = 45;
+const PITCH_FAR = 74;
 const PITCH_NEAR = 45;
-const ZOOM_FAR = 18;
+const ZOOM_FAR = 20;
 const ZOOM_NEAR = 110;
+const FAR_CLIP = 600;
 
 export interface Pt {
   x: number;
@@ -25,7 +26,7 @@ const dir = new THREE.Vector3();
 const tmp = new THREE.Vector3();
 
 export class CameraRig {
-  readonly camera = new THREE.PerspectiveCamera(FOV, 1, 0.5, 600);
+  readonly camera = new THREE.PerspectiveCamera(FOV, 1, 0.5, FAR_CLIP);
   /** Ground point the camera looks at (tiles). */
   x = 0;
   y = 0;
@@ -68,6 +69,12 @@ export class CameraRig {
     const d = this.distance;
     const p = this.pitchFor(this.zoom);
     const c = this.camera;
+    // Fitting a large map on a tall, narrow screen can put the ground past the usual far plane.
+    const far = Math.max(FAR_CLIP, d * 1.25);
+    if (c.far !== far) {
+      c.far = far;
+      c.updateProjectionMatrix();
+    }
     c.position.set(this.x, Math.sin(p) * d, this.y + Math.cos(p) * d);
     c.lookAt(this.x, 0, this.y);
     if (this.offset.lengthSq() > 0) c.position.add(this.offset);

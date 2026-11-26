@@ -15,7 +15,8 @@ import {
 import { step } from "../src/sim/sim";
 import { Terrain, type Faction, type UnitKind, type World } from "../src/sim/types";
 import { buildingCenter, createWorld, distToBuilding, hqOf, isResource, spawnUnit, terrainAt } from "../src/sim/world";
-import { fitZoom, frameCentre, startBox } from "../src/game/framing";
+import { fitCamera, startBox } from "../src/game/framing";
+import { CameraRig } from "../src/game/three/camera";
 
 const units = (w: World, f: Faction, kind?: UnitKind) =>
   [...w.units.values()].filter((u) => u.faction === f && (!kind || u.kind === kind));
@@ -278,17 +279,30 @@ describe("start camera framing", () => {
     }
   });
 
-  it("centres the box in the part of the screen the HUD leaves free", () => {
-    const box = { x0: 2, y0: 4, x1: 12, y1: 10 };
-    const ins = { top: 50, right: 10, bottom: 250, left: 10 };
-    const zoom = fitZoom(box, 390, 844, ins, 64);
-    expect(zoom).toBeCloseTo((390 - 20) / (10 * 64));
-    const c = frameCentre(box, zoom, 390, 844, ins, 64);
-    // the box centre lands mid-way between the top bar and the dock
-    const screenY = 844 / 2 + (7 * 64 - c.y) * zoom;
-    expect(screenY).toBeCloseTo(50 + (844 - 300) / 2);
-    const screenX = 390 / 2 + (7 * 64 - c.x) * zoom;
-    expect(screenX).toBeCloseTo(195);
+  it("fits a 108-tile battlefield between the HUD edges without far-plane clipping", () => {
+    const rig = new CameraRig();
+    const map = { x0: -2, y0: -2, x1: 110, y1: 110 };
+    rig.bounds = map;
+    for (const [width, height, area] of [
+      [390, 844, { x0: 56, y0: 128, x1: 382, y1: 644 }],
+      [1440, 900, { x0: 56, y0: 52, x1: 1226, y1: 892 }]
+    ] as const) {
+      rig.setViewport(width, height);
+      expect(fitCamera(rig, map, area, 32)).toBe(true);
+      expect(rig.zoom).toBeLessThan(18);
+      expect(rig.pitchFor(rig.zoom)).toBeGreaterThan(Math.PI / 3);
+      const centre = rig.project(54, 54);
+      expect(centre.x).toBeCloseTo((area.x0 + area.x1) / 2);
+      expect(centre.y).toBeCloseTo((area.y0 + area.y1) / 2);
+      for (const x of [map.x0, map.x1]) for (const y of [map.y0, map.y1]) {
+        const p = rig.project(x, y);
+        expect(p.behind).toBe(false);
+        expect(p.x).toBeGreaterThanOrEqual(area.x0);
+        expect(p.x).toBeLessThanOrEqual(area.x1);
+        expect(p.y).toBeGreaterThanOrEqual(area.y0);
+        expect(p.y).toBeLessThanOrEqual(area.y1);
+      }
+    }
   });
 });
 

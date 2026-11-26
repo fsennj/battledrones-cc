@@ -39,7 +39,7 @@ export function mountAudioToggles(host: HTMLElement): () => void {
         const chirps = on && !s.speech;
         b.querySelector(".sl")!.textContent = chirps ? "Chirps" : "Voice";
         b.querySelector(".si")!.textContent = chirps ? "🤖" : "🗣";
-        b.title = chirps ? "Unit chirps and radio codes, no speech (tap to turn off)" : on ? "Announcer speech and unit chirps (tap for chirps only)" : "Voice off (tap to turn on)";
+        b.title = chirps ? "Unit chirps and radio codes, no speech (tap to turn off)" : on ? "Recorded English radio and unit chirps (tap for chirps only)" : "Voice off (tap to turn on)";
       }
     });
   };

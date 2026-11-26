@@ -2,6 +2,7 @@ import { BUILDINGS } from "../sim/balance";
 import { predictOpenerSite } from "../sim/openers";
 import type { Faction, World } from "../sim/types";
 import { hqOf, isResource } from "../sim/world";
+import type { CameraRig } from "./three/camera";
 
 /** An axis-aligned box in tile units. */
 export interface Box {
@@ -82,43 +83,63 @@ export function startBox(w: World, faction: Faction): Box | null {
   return { x0: box.x0 - 1, y0: box.y0 - 1, x1: box.x1 + 1, y1: box.y1 + 1 };
 }
 
-/** CSS-px zoom that fits `box` into the free part of a viewW×viewH screen. */
-export function fitZoom(box: Box, viewW: number, viewH: number, ins: Insets, tile: number): number {
-  const freeW = Math.max(80, viewW - ins.left - ins.right);
-  const freeH = Math.max(80, viewH - ins.top - ins.bottom);
-  return Math.min(freeW / ((box.x1 - box.x0) * tile), freeH / ((box.y1 - box.y0) * tile));
-}
-
-/**
- * World-px point the camera must centre on so `box` sits in the middle of
- * the free area (not of the whole screen) at CSS zoom `zoom`.
- */
-export function frameCentre(box: Box, zoom: number, viewW: number, viewH: number, ins: Insets, tile: number) {
-  const freeCx = ins.left + (viewW - ins.left - ins.right) / 2;
-  const freeCy = ins.top + (viewH - ins.top - ins.bottom) / 2;
-  return {
-    x: ((box.x0 + box.x1) / 2) * tile - (freeCx - viewW / 2) / zoom,
-    y: ((box.y0 + box.y1) / 2) * tile - (freeCy - viewH / 2) / zoom
-  };
-}
-
 /** Measure how much of the screen the DOM HUD covers on each edge (CSS px). */
-export function hudInsets(): Insets {
-  const W = window.innerWidth;
-  const H = window.innerHeight;
+function hudInsets(W: number, H: number): Insets {
   const rect = (sel: string) => document.querySelector(sel)?.getBoundingClientRect() ?? null;
   const ins: Insets = { top: 8, right: 8, bottom: 8, left: 8 };
-  for (const sel of [".tl", ".topbar"]) {
+  const landscape = W > H;
+  const topWidgets = landscape ? [".tl", ".topbar"] : [".tl", ".topbar", ".minimap-wrap"];
+  for (const sel of topWidgets) {
     const r = rect(sel);
     if (r && r.height > 0) ins.top = Math.max(ins.top, r.bottom + 6);
   }
   // the zoom buttons stand over the map at the left edge, where the starting squad waits
   const zoom = rect(".zoombtns");
   if (zoom && zoom.width > 0) ins.left = Math.max(ins.left, zoom.right + 6);
-  const landscape = W > H;
   const bar = rect(".buildbar");
   const dock = rect(".dock");
-  if (landscape && bar && bar.width > 0) ins.right = Math.max(ins.right, W - bar.left + 6);
-  else if (dock && dock.height > 0) ins.bottom = Math.max(ins.bottom, H - dock.top + 6);
+  if (landscape) {
+    if (bar && bar.width > 0) ins.right = Math.max(ins.right, W - bar.left + 6);
+  } else if (dock && dock.height > 0) ins.bottom = Math.max(ins.bottom, H - dock.top + 6);
   return ins;
+}
+
+/** The rectangle available for camera framing, in CSS px. */
+export function hudPlayArea(w: number, h: number): Box {
+  const ins = hudInsets(w, h);
+  const x0 = Math.min(ins.left, w - 1);
+  const y0 = Math.min(ins.top, h - 1);
+  return { x0, y0, x1: Math.max(x0 + 1, w - ins.right), y1: Math.max(y0 + 1, h - ins.bottom) };
+}
+
+/** Fit a ground box into screen space using the rig's pitch at each candidate zoom. */
+export function fitCamera(rig: CameraRig, box: Box, area: Box, maxZoom: number): boolean {
+  const previous = { x: rig.x, y: rig.y, zoom: rig.zoom };
+  const x = (box.x0 + box.x1) / 2;
+  const y = (box.y0 + box.y1) / 2;
+  const sx = (area.x0 + area.x1) / 2;
+  const sy = (area.y0 + area.y1) / 2;
+  const fits = (zoom: number) => {
+    rig.zoom = zoom;
+    rig.placeAt(x, y, sx, sy);
+    for (const px of [box.x0, box.x1]) {
+      for (const py of [box.y0, box.y1]) {
+        const p = rig.project(px, py);
+        if (p.behind || p.x < area.x0 || p.x > area.x1 || p.y < area.y0 || p.y > area.y1) return false;
+      }
+    }
+    return true;
+  };
+  if (fits(maxZoom)) return true;
+  let lo = 0;
+  let hi = maxZoom;
+  for (let i = 0; i < 16; i++) {
+    const zoom = (lo + hi) / 2;
+    if (fits(zoom)) lo = zoom;
+    else hi = zoom;
+  }
+  if (lo > 0) return fits(lo);
+  rig.zoom = previous.zoom;
+  rig.centerOn(previous.x, previous.y);
+  return false;
 }

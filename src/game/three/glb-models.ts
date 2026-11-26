@@ -28,7 +28,7 @@ const GLB_UNITS: Partial<Record<UnitKind, string>> = Object.fromEntries(
 );
 /** Buildings with Blender geometry, including separately animated turret or radar heads. */
 const GLB_BUILDINGS: Partial<Record<BuildingKind, string>> = Object.fromEntries(
-  (["hq", "fab-plant", "depot", "airpad", "radar", "sam-site", "turret"] as BuildingKind[]).map((k) => [k, `assets/models/${k}.glb`])
+  (["hq", "fab-plant", "depot", "airpad", "radar", "sam-site", "turret", "tech-lab"] as BuildingKind[]).map((k) => [k, `assets/models/${k}.glb`])
 );
 const loaded = new Map<UnitKind | BuildingKind, GlbParts>();
 

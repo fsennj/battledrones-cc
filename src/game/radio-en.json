@@ -1,0 +1,401 @@
+{
+  "file": "radio-en-829410914b3a.mp3",
+  "cues": {
+    "radio-check": [
+      0.0,
+      2.80596
+    ],
+    "no-scrap": [
+      2.80596,
+      1.496
+    ],
+    "cant-build": [
+      4.30196,
+      1.88267
+    ],
+    "hq-attack": [
+      6.18462,
+      1.80729
+    ],
+    "hq-attack-team": [
+      7.99192,
+      1.73333
+    ],
+    "base-attack": [
+      9.72525,
+      1.78467
+    ],
+    "units-attack": [
+      11.50992,
+      1.94667
+    ],
+    "goliath-attack": [
+      13.45658,
+      2.01067
+    ],
+    "goliath-attack-team": [
+      15.46725,
+      1.574
+    ],
+    "calldown-hit": [
+      17.04125,
+      1.24796
+    ],
+    "structure-lost": [
+      18.28921,
+      1.57262
+    ],
+    "structure-killed": [
+      19.86183,
+      1.64667
+    ],
+    "structure-killed-team": [
+      21.5085,
+      1.56396
+    ],
+    "hq-fell": [
+      23.07246,
+      2.65529
+    ],
+    "hq-fell-team": [
+      25.72775,
+      3.16733
+    ],
+    "enemy-hq-fell": [
+      28.89508,
+      2.06467
+    ],
+    "goliath-lost": [
+      30.95975,
+      1.65533
+    ],
+    "squad-lost": [
+      32.61508,
+      1.44733
+    ],
+    "harvester-lost": [
+      34.06242,
+      1.68933
+    ],
+    "unit-lost": [
+      35.75175,
+      1.43467
+    ],
+    "first-blood": [
+      37.18642,
+      1.49867
+    ],
+    "kill-unit": [
+      38.68508,
+      1.78596
+    ],
+    "kill-goliath": [
+      40.47104,
+      1.56533
+    ],
+    "kill-big": [
+      42.03637,
+      1.72333
+    ],
+    "promoted": [
+      43.75971,
+      2.224
+    ],
+    "draw": [
+      45.98371,
+      1.76463
+    ],
+    "defeat": [
+      47.74833,
+      1.41463
+    ],
+    "victory": [
+      49.16296,
+      2.57729
+    ],
+    "hq-destroyed": [
+      51.74025,
+      2.40196
+    ],
+    "construction": [
+      54.14221,
+      1.678
+    ],
+    "condor-down": [
+      55.82021,
+      2.62133
+    ],
+    "lifeline": [
+      58.44154,
+      2.34063
+    ],
+    "drop-team": [
+      60.78217,
+      1.39467
+    ],
+    "troops-deployed": [
+      62.17683,
+      1.48867
+    ],
+    "enemy-drop": [
+      63.6655,
+      2.00933
+    ],
+    "enemy-barrage": [
+      65.67483,
+      2.38796
+    ],
+    "enemy-emp": [
+      68.06279,
+      2.31929
+    ],
+    "enemy-droppod": [
+      70.38208,
+      1.988
+    ],
+    "enemy-goliath-build": [
+      72.37008,
+      2.26267
+    ],
+    "enemy-goliath-soon": [
+      74.63275,
+      2.288
+    ],
+    "goliath-build-team": [
+      76.92075,
+      2.26667
+    ],
+    "goliath-soon-team": [
+      79.18742,
+      2.80733
+    ],
+    "goliath-ready": [
+      81.99475,
+      1.89133
+    ],
+    "goliath-field-team": [
+      83.88608,
+      1.92533
+    ],
+    "enemy-goliath": [
+      85.81142,
+      1.97796
+    ],
+    "goliath-anchored": [
+      87.78938,
+      2.06467
+    ],
+    "goliath-dig-team": [
+      89.85404,
+      1.73333
+    ],
+    "enemy-goliath-dig": [
+      91.58737,
+      2.04196
+    ],
+    "enemy-goliath-pack": [
+      93.62933,
+      2.60533
+    ],
+    "goliath-weapons-down": [
+      96.23467,
+      2.11733
+    ],
+    "goliath-weapons-up": [
+      98.352,
+      2.51129
+    ],
+    "enemy-goliath-weapons-down": [
+      100.86329,
+      2.50133
+    ],
+    "enemy-goliath-weapons-up": [
+      103.36463,
+      2.92667
+    ],
+    "goliath-airborne": [
+      106.29129,
+      1.67929
+    ],
+    "goliath-dropped": [
+      107.97058,
+      1.75333
+    ],
+    "enemy-goliath-airborne": [
+      109.72392,
+      1.99929
+    ],
+    "enemy-goliath-dropped": [
+      111.72321,
+      2.126
+    ],
+    "enemy-air": [
+      113.84921,
+      1.78596
+    ],
+    "air-team": [
+      115.63517,
+      1.48
+    ],
+    "inbound": [
+      117.11517,
+      2.246
+    ],
+    "inbound-air": [
+      119.36117,
+      2.93667
+    ],
+    "inbound-ground": [
+      122.29783,
+      2.05333
+    ],
+    "inbound-mixed": [
+      124.35117,
+      2.776
+    ],
+    "out-team": [
+      127.12717,
+      1.998
+    ],
+    "out-us": [
+      129.12517,
+      1.43596
+    ],
+    "streak-2": [
+      130.56113,
+      1.61667
+    ],
+    "streak-3": [
+      132.17779,
+      1.702
+    ],
+    "streak-5": [
+      133.87979,
+      1.77467
+    ],
+    "unit-elite": [
+      135.65446,
+      2.49867
+    ],
+    "uplink-spectate": [
+      138.15312,
+      2.01933
+    ],
+    "uplink-captured": [
+      140.17246,
+      1.45
+    ],
+    "uplink-lost": [
+      141.62246,
+      1.49867
+    ],
+    "supply-drop": [
+      143.12113,
+      2.97662
+    ],
+    "salvage-haul": [
+      146.09775,
+      1.50267
+    ],
+    "sky-hammer-online": [
+      147.60042,
+      1.702
+    ],
+    "sky-hammer-inbound": [
+      149.30242,
+      1.63662
+    ],
+    "enemy-sky-hammer": [
+      150.93904,
+      3.598
+    ],
+    "wave-incoming": [
+      154.53704,
+      2.382
+    ],
+    "boss-incoming": [
+      156.91904,
+      2.594
+    ],
+    "wave-cleared": [
+      159.51304,
+      2.00733
+    ],
+    "new-record": [
+      161.52038,
+      1.41463
+    ],
+    "match-rules": [
+      162.935,
+      2.76333
+    ],
+    "daily-rules": [
+      165.69833,
+      2.58129
+    ],
+    "opener-airwing": [
+      168.27963,
+      1.86729
+    ],
+    "opener-industry": [
+      170.14692,
+      1.77467
+    ],
+    "opener-blitz": [
+      171.92158,
+      1.84867
+    ],
+    "opener": [
+      173.77025,
+      3.30933
+    ],
+    "op-start-bridgehead": [
+      177.07958,
+      5.62933
+    ],
+    "op-start-harvest-moon": [
+      182.70892,
+      6.44267
+    ],
+    "op-start-decapitation": [
+      189.15158,
+      5.74
+    ],
+    "op-start-frozen-assets": [
+      194.89158,
+      6.74133
+    ],
+    "op-start-sky-pirates": [
+      201.63292,
+      5.99062
+    ],
+    "op-start-glass-jaw": [
+      207.62354,
+      6.68733
+    ],
+    "op-start-iron-tide": [
+      214.31088,
+      4.82133
+    ],
+    "op-start-last-light": [
+      219.13221,
+      6.29333
+    ],
+    "op-timer": [
+      225.42554,
+      1.40467
+    ],
+    "op-timer-hold": [
+      226.83021,
+      1.77467
+    ],
+    "op-complete": [
+      228.60487,
+      2.42663
+    ],
+    "op-failed": [
+      231.0315,
+      2.42796
+    ]
+  }
+}

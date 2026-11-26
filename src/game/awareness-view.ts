@@ -40,6 +40,8 @@ export interface AwarenessHooks {
   spectator: boolean;
   hud: Hud;
   radio: Announcer;
+  /** The HUD-safe point the camera places its focus under. */
+  playCentre(): { x: number; y: number };
   /** Can the local player see this tile point (fog, or fog switched off)? */
   sees(x: number, y: number): boolean;
   /** …and this enemy unit itself (a Sniper Team hidden in the woods is not seen)? Default: yes. */
@@ -229,8 +231,7 @@ export class Awareness {
 
   /** Middle of the visible battlefield on screen (CSS px). */
   playCentre(): { x: number; y: number } {
-    const p = this.ui.layout().play;
-    return { x: (p.x0 + p.x1) / 2, y: (p.y0 + p.y1) / 2 };
+    return this.h.playCentre();
   }
 
   /** Is tile point (x, y) at least `margin` CSS px inside the visible battlefield? */
@@ -244,8 +245,8 @@ export class Awareness {
   glideTo(x: number, y: number): void {
     if (this.h.cinematic?.()) return;
     this.h.took?.();
-    const p = this.ui.layout().play;
-    const to = this.h.rig.targetFor(x, y, (p.x0 + p.x1) / 2, (p.y0 + p.y1) / 2);
+    const c = this.playCentre();
+    const to = this.h.rig.targetFor(x, y, c.x, c.y);
     const rig = this.h.rig;
     this.glide = { x0: rig.x, y0: rig.y, x1: to.x, y1: to.y, t: 0 };
   }

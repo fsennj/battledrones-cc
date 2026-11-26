@@ -19,7 +19,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../dist");
 const SHOT_DIR = process.env.SMOKE_SHOT_DIR ?? "/tmp";
 const MIME = {
   ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
-  ".png": "image/png", ".webp": "image/webp", ".json": "application/json",
+  ".png": "image/png", ".webp": "image/webp", ".json": "application/json", ".mp3": "audio/mpeg",
   ".webmanifest": "application/manifest+json"
 };
 const sideArg = process.argv.slice(2).find((a) => a.startsWith("--side="));
@@ -179,19 +179,26 @@ if (sid) {
   await page.waitForFunction(() => !!document.querySelector(".sq .sqi:not([hidden])"), null, { timeout: 5000 }).catch(() => {});
   const chip = await page.locator(".sq .sqi").first().getAttribute("src");
   if (!chip?.includes("stinger") || chip.includes("/red/") !== (side === "red")) fail(`squad chip not in ${side}'s paint: ${chip}`);
-  // tap open ground: a spot next to the Stinger that no HUD toast or banner is covering
+  // Tap an open spot next to the Stinger, clear of the HUD and other entities at the current zoom.
   const ground = await page.evaluate(({ sx, sy }) => {
+    const { cam, scene, world } = window.__bd;
     for (const [dx, dy] of [[60, -60], [60, 60], [-60, 60], [-60, -60], [90, 0], [-90, 0]]) {
-      const el = document.elementFromPoint(sx + dx, sy + dy);
-      if (el && el.tagName === "CANVAS") return { x: sx + dx, y: sy + dy };
+      const x = sx + dx;
+      const y = sy + dy;
+      if (!document.elementFromPoint(x, y)?.classList.contains("view3d")) continue;
+      const p = cam.ground(x, y);
+      if (p.x < 0 || p.x >= world.width || p.y < 0 || p.y >= world.height) continue;
+      if (scene.pick(x, y).kind === "ground") return { x, y };
     }
-    return { x: sx + 60, y: sy - 60 };
+    return null;
   }, pos);
-  await page.touchscreen.tap(ground.x, ground.y);
-  await ff(2);
-  const order = await world((id) => window.__bd.world.units.get(id)?.order.type, sid);
-  if (order !== "attackMove" && order !== "idle") fail(`ground tap gave order ${order}`);
-  if (order !== "attackMove") fail("ground tap did not issue attack-move");
+  if (!ground) fail("no open ground next to the Stinger");
+  else {
+    await page.touchscreen.tap(ground.x, ground.y);
+    await ff(2);
+    const order = await world((id) => window.__bd.world.units.get(id)?.order.type, sid);
+    if (order !== "attackMove") fail(`ground tap gave order ${order} instead of attack-move`);
+  }
   await shot("selected");
 }
 

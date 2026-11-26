@@ -6,30 +6,23 @@
  * through RadioQueue: most important first, ≥ 2.5 s apart, stale lines
  * dropped.
  *
- * Delivery: a short radio squelch on the voice bus, then the browser's
- * speechSynthesis (low pitch, a little fast, an English voice preferred),
- * and a soft "over" click at the end. Where speech is missing, or the Voice
- * setting is "Chirps" (no speech), a two-tone radio code stands in for the
- * words; radio-only lines also get a small caption so nothing is lost with
- * the sound off. Speech must be unlocked from a user gesture on iOS; the
- * module primes it on the first tap.
+ * Delivery: a short squelch and a recorded English line on the voice bus,
+ * followed by an over click. Chirps mode and unavailable clips use the
+ * two-tone code. The HUD keeps the full names and details in its captions.
  */
 import type { Faction, FxEvent, World } from "../sim/types";
 import { onAnnounce, announce, type Announcement, type AnnounceTone } from "./announce";
 import { sfx } from "./audio";
+import { radioCueId, radioVoice } from "./radio-voice";
 import { BattleCallouts, RadioQueue, isEndLine, speakable, type RadioCueKey, type RadioLine } from "./callouts";
 
 /** Speech voice settings. */
 export const SPEECH = {
   rate: 1.08,
-  pitch: 0.6,
-  volume: 0.95,
   /** Gap between the squelch and the first word, ms. */
   leadMs: 130,
   /** Music duck while a line plays, dB. */
-  duckDb: 5,
-  /** Give up waiting for a line's end after this long past its estimate, s. */
-  overrunS: 2
+  duckDb: 5
 } as const;
 
 /** Rough spoken length of a line, seconds (for the music duck and the busy timeout). */
@@ -37,133 +30,6 @@ export function lineSeconds(text: string, rate: number = SPEECH.rate): number {
   const words = text.split(/\s+/).filter(Boolean).length;
   return 0.35 + (words * 0.34) / rate;
 }
-
-// --------------------------------------------------------------- speech --
-
-type SpeechState = "unknown" | "ok" | "missing";
-
-/** Thin wrapper around window.speechSynthesis: voice choice, iOS priming, failure detection. */
-class Speech {
-  private synth: SpeechSynthesis | null =
-    typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis : null;
-  private voice: SpeechSynthesisVoice | null = null;
-  private primed = false;
-  private failures = 0;
-  state: SpeechState = this.synth ? "unknown" : "missing";
-
-  constructor() {
-    const s = this.synth;
-    if (!s || typeof window === "undefined") return;
-    this.pick();
-    s.addEventListener?.("voiceschanged", () => this.pick());
-    // iOS only lets speech start after it was first used inside a gesture
-    // (not in a sound duel's link mode: no speech then, and the listener
-    // stays for the first tap after it)
-    const prime = () => {
-      if (this.primed || sfx.linkMode) return;
-      this.primed = true;
-      this.failures = 0;
-      try {
-        const u = new SpeechSynthesisUtterance(" ");
-        u.volume = 0;
-        s.speak(u);
-      } catch {
-        /* ignore */
-      }
-      for (const ev of ["pointerup", "touchend", "mousedown", "keydown"]) window.removeEventListener(ev, prime, true);
-    };
-    for (const ev of ["pointerup", "touchend", "mousedown", "keydown"])
-      window.addEventListener(ev, prime, { capture: true, passive: true });
-  }
-
-  /** Choose a voice: English, preferably on-device and male-sounding (a low commander). */
-  private pick(): void {
-    const all = this.synth?.getVoices() ?? [];
-    if (all.length === 0) return;
-    const en = all.filter((v) => /^en([-_]|$)/i.test(v.lang));
-    const pool = en.length ? en : all;
-    const score = (v: SpeechSynthesisVoice) =>
-      (v.localService ? 2 : 0) +
-      (/male|daniel|alex|fred|david|george|guy|mark|ryan|arthur|james|thomas|rishi|oliver/i.test(v.name) && !/female/i.test(v.name) ? 3 : 0) +
-      (/en[-_](gb|us)/i.test(v.lang) ? 1 : 0) +
-      (v.default ? 0.5 : 0);
-    this.voice = [...pool].sort((a, b) => score(b) - score(a))[0] ?? null;
-    this.state = "ok";
-  }
-
-  /** Can we talk right now? */
-  get usable(): boolean {
-    return !!this.synth && this.state !== "missing" && this.failures < 3;
-  }
-
-  /**
-   * Speak `text`. `done` runs when it ends; `failed` runs instead if it errors
-   * or never starts (so the caller can fall back to the radio code). Returns
-   * false if speech can't be used at all.
-   */
-  speak(text: string, tone: AnnounceTone, done: () => void, failed: () => void): boolean {
-    const s = this.synth;
-    if (!s || !this.usable) return false;
-    try {
-      const u = new SpeechSynthesisUtterance(text);
-      if (this.voice) u.voice = this.voice;
-      u.lang = this.voice?.lang ?? "en-US";
-      // hype lines are a touch slower and lower, warnings a touch quicker
-      u.rate = tone === "epic" ? SPEECH.rate * 0.94 : tone === "bad" ? SPEECH.rate * 1.04 : SPEECH.rate;
-      u.pitch = tone === "epic" ? SPEECH.pitch * 0.9 : SPEECH.pitch;
-      u.volume = SPEECH.volume;
-      let started = false;
-      let finished = false;
-      const finish = (ok: boolean) => {
-        if (finished) return;
-        finished = true;
-        window.clearTimeout(watchdog);
-        if (ok) done();
-        else failed();
-      };
-      u.onstart = () => {
-        started = true;
-        this.failures = 0;
-      };
-      u.onend = () => finish(started);
-      u.onerror = (e) => {
-        const err = (e as SpeechSynthesisErrorEvent).error;
-        // cut short by our own cancel(): that's the end of the line, not a failure
-        if (err === "interrupted" || err === "canceled") return finish(true);
-        // "not-allowed" before the first gesture (iOS, Chrome autoplay rules)
-        // isn't the engine's fault — priming fixes it — so it doesn't count
-        if (!(err === "not-allowed" && !this.primed)) this.failures++;
-        finish(false);
-      };
-      // a voice-less engine may never start (or report): fall back after a while
-      const watchdog = window.setTimeout(() => {
-        if (started) return;
-        this.failures++;
-        finish(false); // before cancel(), whose error event must not claim the line
-        this.cancel();
-      }, 1500);
-      if (s.speaking || s.pending) {
-        // cancel-then-speak in one go is dropped by some engines: give it a beat
-        s.cancel();
-        window.setTimeout(() => s.speak(u), 60);
-      } else s.speak(u);
-      return true;
-    } catch {
-      this.failures++;
-      return false;
-    }
-  }
-
-  cancel(): void {
-    try {
-      this.synth?.cancel();
-    } catch {
-      /* ignore */
-    }
-  }
-}
-
-const speech = new Speech();
 
 // ----------------------------------------------------------- radio sounds --
 
@@ -248,17 +114,13 @@ function code(tone: AnnounceTone, priority: number): number {
 
 /**
  * A quick sample after the Voice setting changes (pause menu): "Radio check"
- * in words, or the radio code in Chirps mode. Runs inside the tap, which
- * also unlocks speech on iOS.
+ * in words or the radio code in Chirps mode.
  */
 export function radioCheck(): void {
   if (!sfx.enabled("voice")) return;
   squelch(true);
-  const fallback = () => code("info", 2);
-  // link mode (a sound duel) speaks no words: the code stands in
-  if (sfx.settings.speech && !sfx.linkMode && speech.usable) {
-    if (!speech.speak("Radio check", "info", () => squelch(false), fallback)) fallback();
-  } else fallback();
+  const seconds = radioVoice.play("radio-check", SPEECH.leadMs / 1000, () => squelch(false));
+  if (seconds === null) code("info", 2);
 }
 
 // ------------------------------------------------------------ announcer --
@@ -296,9 +158,11 @@ export class Announcer {
   private clock = 0;
   private simT = 0;
   private busyUntil = 0;
+  private briefingUntil = 0;
+  private interruptBriefing = false;
   private ended = false;
+  private pendingBriefing: RadioLine | null = null;
   private offAnnounce: () => void;
-  private offChange: () => void;
   readonly log: RadioLogEntry[] = [];
 
   constructor(private h: AnnouncerHooks) {
@@ -309,16 +173,7 @@ export class Announcer {
     });
     // every banner is read out too (its text is on screen, so no caption)
     this.offAnnounce = onAnnounce((a) => this.announced(a));
-    // the Voice switch (or master mute, or link mode) cuts a line mid-word
-    this.offChange = sfx.onChange(() => {
-      if (!this.speechOn) speech.cancel();
-    });
     active = this;
-  }
-
-  /** May lines be spoken (not just coded)? Never in a sound duel's link mode. */
-  private get speechOn(): boolean {
-    return sfx.enabled("voice") && sfx.settings.speech && !sfx.linkMode;
   }
 
   /** This tick's sim events at sim time `t`. */
@@ -336,16 +191,24 @@ export class Announcer {
     if (this.ended && a.priority !== 0) return;
     const text = a.say ?? speakable(a.text);
     if (!text) return;
-    this.push({ key: `banner:${a.key}`, text, priority: a.priority ?? 2, tone: a.tone ?? "info", caption: false });
+    const line = { key: `banner:${a.key}`, text, priority: a.priority ?? 2, tone: a.tone ?? "info", caption: false };
+    if (a.key === "op-start" && radioVoice.waiting) this.pendingBriefing = line;
+    else this.push(line);
   }
 
   push(line: RadioLine): void {
     if (this.ended) return;
+    if (line.priority <= 1 && this.clock < this.briefingUntil) {
+      radioVoice.cancel();
+      this.briefingUntil = this.busyUntil = 0;
+      this.interruptBriefing = true;
+    }
     if (isEndLine(line)) {
       // the last word: nothing else waits or talks over it
       this.ended = true;
+      this.pendingBriefing = null;
       this.queue.clear();
-      speech.cancel();
+      radioVoice.cancel();
       this.busyUntil = 0;
       this.queue.push(line, this.clock);
       return;
@@ -357,48 +220,34 @@ export class Announcer {
   update(deltaMs: number, paused: boolean): void {
     if (paused) return; // lines wait (and don't age) while the game is paused
     this.clock += deltaMs / 1000;
+    if (this.pendingBriefing && !radioVoice.waiting) {
+      this.push(this.pendingBriefing);
+      this.pendingBriefing = null;
+    }
     const busy = this.clock < this.busyUntil;
     // the final line goes out at once; everything else respects the gap
-    const line = this.queue.next(this.clock, busy, this.ended);
-    if (line) this.deliver(line);
+    const line = this.queue.next(this.clock, busy, this.ended || this.interruptBriefing);
+    if (line) {
+      this.interruptBriefing = false;
+      this.deliver(line);
+    }
   }
 
   private deliver(line: RadioLine): void {
     if (line.caption) this.h.caption(line);
     const voiceOn = sfx.enabled("voice") && !!sfx.engine;
     let how: RadioLogEntry["how"] = "silent";
-    let len = lineSeconds(line.text);
     if (voiceOn) {
       squelch(true);
-      const words = this.speechOn && speech.usable;
-      if (words) {
-        how = "speech";
-        const startAt = this.clock;
-        const release = () => (this.busyUntil = Math.min(this.busyUntil, this.clock + 0.25));
-        window.setTimeout(() => {
-          const ok = speech.speak(
-            line.text,
-            line.tone,
-            () => {
-              // done: an "over" click, and the queue may move on shortly
-              if (sfx.enabled("voice")) squelch(false);
-              release();
-            },
-            () => {
-              // no words came out: the code still tells the line apart
-              if (sfx.enabled("voice") && !this.ended) code(line.tone, line.priority);
-              release();
-            }
-          );
-          if (!ok) code(line.tone, line.priority);
-        }, SPEECH.leadMs);
-        this.busyUntil = startAt + len + SPEECH.overrunS;
-      } else {
-        how = "code";
-        len = code(line.tone, line.priority);
-        this.busyUntil = this.clock + len + 0.2;
-      }
-      sfx.duck(SPEECH.duckDb, len);
+      const clip = radioCueId(line.key, line.text, this.h.spectator);
+      const seconds = radioVoice.play(clip, SPEECH.leadMs / 1000, () => {
+        if (sfx.enabled("voice")) squelch(false);
+      });
+      how = seconds === null ? "code" : "speech";
+      const length = seconds ?? code(line.tone, line.priority);
+      this.busyUntil = this.clock + length + 0.2;
+      if (seconds !== null && line.key === "banner:op-start") this.briefingUntil = this.busyUntil;
+      sfx.duck(SPEECH.duckDb, length);
     }
     this.log.push({ t: Math.round(this.simT * 10) / 10, key: line.key, text: line.text, how });
     if (this.log.length > 400) this.log.splice(0, 100);
@@ -406,14 +255,8 @@ export class Announcer {
 
   destroy(): void {
     this.offAnnounce();
-    this.offChange();
-    speech.cancel();
+    radioVoice.cancel();
     this.queue.clear();
     if (active === this) active = null;
   }
 }
-
-if (typeof document !== "undefined")
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) speech.cancel();
-  });

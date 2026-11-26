@@ -45,7 +45,7 @@ import { showOpenerPicker } from "../ui/openers";
 import { createPowerPanel, type PowerPanel } from "../ui/powers";
 import { createObjectivePill, type ObjectivePill } from "../ui/objectives";
 import { mountCineToggle, type CineToggle } from "../ui/cinecam";
-import { fitZoom, homeBox, hudInsets, startBox } from "./framing";
+import { fitCamera, homeBox, hudPlayArea, startBox, type Box } from "./framing";
 import { Stage } from "./three/stage";
 import { Terrain3D, type TerrainArt } from "./three/terrain";
 import { Particles } from "./three/particles";
@@ -62,7 +62,6 @@ const TICK_MS = 1000 / TICK_RATE;
 /** A watched match keeps its chronicle every this many ticks, as the replay viewer keeps the world (game/replay.ts KEYFRAME_TICKS). */
 const CHRONICLE_EVERY = 30 * TICK_RATE;
 /** Zoom range in CSS px per tile at the look-at point. */
-const MIN_ZOOM = 18;
 const MAX_ZOOM = 110;
 const DEFAULT_ZOOM = 42;
 /** The look-at point may wander this far past the map edge (tiles). */
@@ -217,6 +216,9 @@ export class GameScene {
   /** Smooth-zoom target and its screen anchor point (CSS px). */
   private targetZoom = DEFAULT_ZOOM;
   private zoomAnchor: { x: number; y: number } | null = null;
+  private playArea!: Box;
+  /** The wide view and its zoom floor for the current HUD layout. */
+  private overview!: { x: number; y: number; zoom: number };
   /** AI vs AI: the cinematic camera's director (null when playing), whether it's switched on, and its 🎥 button. */
   private cine: Director | null = null;
   private cineOn = true;
@@ -425,13 +427,6 @@ export class GameScene {
       notify: (msg, tone, x, y) => this.hud?.notice(msg, tone, x, y)
     });
 
-    // (the HQ, or under Nomads the anchored Goliath: framing.ts homeBox)
-    const focus = gameMode.spectator ? null : homeBox(this.world, PLAYER);
-    const c = gameMode.op?.focus ?? (focus ? { x: (focus.x0 + focus.x1) / 2, y: (focus.y0 + focus.y1) / 2 } : { x: this.world.width / 2, y: this.world.height / 2 });
-    rig.zoom = this.clampedZoom(DEFAULT_ZOOM);
-    rig.centerOn(c.x, c.y);
-    this.targetZoom = rig.zoom;
-
     this.setupInput();
     // the starting harvester gets to work immediately (a duel's openers set every harvester mining already)
     for (const u of this.world.units.values())
@@ -448,7 +443,8 @@ export class GameScene {
         if (this.finale) return;
         this.cine?.hold();
         this.glide = null;
-        rig.centerOn(wx, wy);
+        const c = this.playCentre();
+        rig.placeAt(wx, wy, c.x, c.y);
       },
       zoomBy: (f) => {
         if (!this.finale) this.zoomBy(f);
@@ -487,6 +483,7 @@ export class GameScene {
     this.aware = new Awareness({
       rig, canvas: this.stage.canvas, world: this.world, player: PLAYER, spectator: gameMode.spectator,
       hud: this.hud, radio: this.radio,
+      playCentre: () => this.playCentre(),
       sees: (x, y) => this.seesPoint(x, y),
       seesUnit: (u) => this.unitVisible(u),
       cinematic: () => !!this.finale,
@@ -521,7 +518,7 @@ export class GameScene {
       // (long-press details run longer than a 2-line ticker toast)
       info: (msg) => this.hud.hint(msg, 6500),
       offerHint: (h) => this.hud.offerHint(h),
-      viewCentre: () => rig.ground(rig.width / 2, rig.height / 2)
+      viewCentre: () => this.aware.viewCentre()
     });
     this.powerUi = powerUi;
     this.teardown.push(() => {
@@ -538,7 +535,8 @@ export class GameScene {
     // Daily Op / mutators banner (with opener cards up it waits for the pick: the cards would hide it)
     if (!this.holdStart) window.setTimeout(() => announceRules(this.world), 1200);
     if (this.world.ops) this.ops = new OpsPresenter(this.world, { notify: (m, t, x, y) => this.hud.notice(m, t, x, y) });
-    if (focus && !gameMode.op) this.frameStart(); // an op opens on its own focus point
+    this.fitOverview();
+    this.frameStart();
     if (this.holdStart) {
       const rivals = multi ? `${this.ais.size} AIs` : this.ai ? `${this.ai.strategy.label} AI` : "the waves";
       const picker = showOpenerPicker({
@@ -671,26 +669,60 @@ export class GameScene {
 
   /** The window changed size or orientation. */
   resize(): void {
+    const rig = this.stage.rig;
+    const centre = this.playCentre();
+    const at = rig.ground(centre.x, centre.y);
+    const zoom = rig.zoom;
+    const { x, y } = rig;
+    const wasOverview = Math.abs(zoom - this.overview.zoom) < 0.01 && Math.hypot(x - this.overview.x, y - this.overview.y) < 0.05;
     this.stage.resize();
-    this.clampZoom();
+    this.fitOverview();
+    if (this.holdStart) this.frameStart();
+    else if (!wasOverview) {
+      const c = this.playCentre();
+      rig.zoom = this.clampedZoom(zoom);
+      rig.placeAt(at.x, at.y, c.x, c.y);
+    }
+    this.targetZoom = rig.zoom;
+    this.zoomAnchor = null;
   }
 
-  /** Open on the player's HQ, home field and factory site, framed clear of the HUD. */
-  private frameStart(): void {
-    const box = startBox(this.world, PLAYER);
-    if (!box) return;
+  private playCentre(): { x: number; y: number } {
+    const { x0, y0, x1, y1 } = this.playArea;
+    return { x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
+  }
+
+  private openingZoom(): number {
+    const { x0, y0, x1, y1 } = this.playArea;
+    // Leave at least a local sector around the base, even on a small phone.
+    return Math.min(32, (x1 - x0) / 17, (y1 - y0) / 16);
+  }
+
+  /** Fit the whole battlefield clear of the HUD, with room around its edges. */
+  private fitOverview(): void {
     const rig = this.stage.rig;
-    const ins = hudInsets();
-    const vw = rig.width;
-    const vh = rig.height;
-    // (the tilted view shortens the box's north-south extent on screen)
-    const flat = { ...box, y1: box.y0 + (box.y1 - box.y0) * 0.85 };
-    const fit = Math.min(48, Math.max(26, fitZoom(flat, vw, vh, ins, 1)));
-    rig.zoom = this.clampedZoom(fit);
+    this.playArea = hudPlayArea(rig.width, rig.height);
+    const zoom = this.openingZoom();
+    if (!fitCamera(rig, rig.bounds, this.playArea, zoom)) {
+      // On a very small window the HUD may leave too little room for a centered fit.
+      fitCamera(rig, rig.bounds, { x0: 0, y0: 0, x1: rig.width, y1: rig.height }, zoom);
+    }
+    this.overview = { x: rig.x, y: rig.y, zoom: rig.zoom };
+  }
+
+  /** Open on the mission's focus or the player's base and its surroundings. */
+  private frameStart(): void {
+    const rig = this.stage.rig;
+    const focus = gameMode.op?.focus;
+    if (focus) {
+      rig.zoom = this.openingZoom();
+      const c = this.playCentre();
+      rig.placeAt(focus.x, focus.y, c.x, c.y);
+    } else if (!gameMode.spectator) {
+      const box = startBox(this.world, PLAYER);
+      if (box) fitCamera(rig, box, this.playArea, this.openingZoom());
+    }
     this.targetZoom = rig.zoom;
-    const sx = ins.left + (vw - ins.left - ins.right) / 2;
-    const sy = ins.top + (vh - ins.top - ins.bottom) / 2;
-    rig.placeAt((box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2, sx, sy);
   }
 
   /** The player picked an opener: every side gets theirs (in canonical order, blue's first, as in a duel) and the clock starts. */
@@ -726,6 +758,9 @@ export class GameScene {
     this.cine?.hold(); // (the player zooming takes the camera from the director for a while)
     this.targetZoom = this.clampedZoom(this.targetZoom * factor);
     this.zoomAnchor = anchorX !== undefined && anchorY !== undefined ? { x: anchorX, y: anchorY } : null;
+    if (factor < 1 && !this.zoomAnchor && this.targetZoom === this.overview.zoom && this.targetZoom === this.stage.rig.zoom) {
+      this.stage.rig.centerOn(this.overview.x, this.overview.y);
+    }
   }
 
   /** Volume for a sound at tile point (x, y): full on screen, fading off it. */
@@ -779,11 +814,19 @@ export class GameScene {
   private updateCamera(delta: number): void {
     const rig = this.stage.rig;
     if (this.directCamera(delta)) return;
-    if (Math.abs(rig.zoom - this.targetZoom) > 0.01) {
+    if (rig.zoom !== this.targetZoom) {
       const t = 1 - Math.pow(0.0025, delta / 1000);
-      const next = rig.zoom + (this.targetZoom - rig.zoom) * t;
-      const a = this.zoomAnchor ?? { x: rig.width / 2, y: rig.height / 2 };
-      rig.zoomAround(this.clampedZoom(next), a.x, a.y);
+      const snap = Math.abs(rig.zoom - this.targetZoom) < 0.01;
+      const k = snap ? 1 : t;
+      const next = rig.zoom + (this.targetZoom - rig.zoom) * k;
+      if (!this.zoomAnchor && this.targetZoom === this.overview.zoom) {
+        // The zoom buttons and keys finish at a centered overview; wheel and pinch keep their anchors.
+        rig.zoom = next;
+        rig.centerOn(rig.x + (this.overview.x - rig.x) * k, rig.y + (this.overview.y - rig.y) * k);
+      } else {
+        const a = this.zoomAnchor ?? this.playCentre();
+        rig.zoomAround(next, a.x, a.y);
+      }
     }
     if (this.finale) return; // the cinematic owns the camera (its pan and push-in): no keys, no momentum
     // keyboard panning (arrows / WASD), speed in CSS px/s
@@ -1849,17 +1892,7 @@ export class GameScene {
   }
 
   private clampedZoom(z: number): number {
-    const rig = this.stage.rig;
-    // zoomed all the way out, a big screen may take in (most of) the whole map
-    const fit = Math.min(rig.width / (this.world.width + 8), rig.height / (this.world.height * 0.8 + 8));
-    return Math.min(MAX_ZOOM, Math.max(Math.max(fit, MIN_ZOOM), z));
-  }
-
-  private clampZoom(): void {
-    const rig = this.stage.rig;
-    rig.zoom = this.clampedZoom(rig.zoom);
-    rig.apply();
-    this.targetZoom = rig.zoom;
+    return Math.min(MAX_ZOOM, Math.max(this.overview.zoom, z));
   }
 
   /** Tear the match down (not needed between matches: a rematch reloads the page). */

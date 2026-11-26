@@ -216,6 +216,16 @@ class FConvolver extends FNode {
   }
 }
 
+class FSource extends FNode {
+  buffer: { duration: number } | null = null;
+  onended: (() => void) | null = null;
+  start = vi.fn();
+  stop = vi.fn();
+  constructor() {
+    super("buffer-source");
+  }
+}
+
 class FContext {
   static made: FContext[] = [];
   /** The next context's rate. */
@@ -251,45 +261,33 @@ class FContext {
   createBuffer(ch: number, len: number, sr: number): FBuffer {
     return new FBuffer(ch, len, sr);
   }
+  createBufferSource(): FSource {
+    return this.add(new FSource());
+  }
+  async decodeAudioData(): Promise<{ duration: number }> {
+    return { duration: 300 };
+  }
   resume(): Promise<void> {
     return Promise.resolve();
   }
 }
 
-const cancelSpeech = vi.fn();
-const speak = vi.fn();
-const listeners: Record<string, ((e?: unknown) => void)[]> = {};
 const g = globalThis as Record<string, unknown>;
 const hadWindow = "window" in g;
 
 beforeAll(() => {
   g.window = {
     AudioContext: FContext,
-    speechSynthesis: {
-      cancel: cancelSpeech,
-      speak,
-      speaking: false,
-      pending: false,
-      getVoices: () => [],
-      addEventListener: () => undefined
-    },
-    addEventListener: (ev: string, fn: (e?: unknown) => void) => (listeners[ev] ??= []).push(fn),
-    removeEventListener: (ev: string, fn: (e?: unknown) => void) => {
-      listeners[ev] = (listeners[ev] ?? []).filter((f) => f !== fn);
-    },
-    // the announcer's watchdogs never fire here (they would outlive the stub)
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    // Network watchdogs are not part of the audio graph test.
     setTimeout: () => 0,
     clearTimeout: () => undefined
-  };
-  g.SpeechSynthesisUtterance = class {
-    volume = 1;
-    constructor(readonly text: string) {}
   };
 });
 
 afterAll(() => {
   if (!hadWindow) delete g.window;
-  delete g.SpeechSynthesisUtterance;
 });
 
 /** The nodes a node feeds. */
@@ -316,11 +314,12 @@ describe("the guard chain (audio.ts)", () => {
       expect(outs(comp)).toEqual([dest]);
       expect(comp.settings()).toEqual(GLUE);
       const before = ctx.nodes.length;
-      cancelSpeech.mockClear();
+      const changed = vi.fn();
+      s.onChange(changed);
 
       s.setLinkGuard("high");
       expect(s.linkMode).toBe(true);
-      expect(cancelSpeech).toHaveBeenCalled();
+      expect(changed).toHaveBeenCalled();
       const [hp] = outs(master) as [FBiquad];
       expect(hp).toBeInstanceOf(FBiquad);
       expect(hp.type).toBe("highpass");
@@ -414,22 +413,28 @@ describe("the guard chain (audio.ts)", () => {
 });
 
 describe("link mode", () => {
-  it("speaks no words: radioCheck codes instead, and the speech priming waits", async () => {
-    const { radioCheck } = await import("../src/game/announcer");
-    const prime = listeners.pointerup?.[0];
-    expect(prime).toBeDefined();
-    sfx.linkMode = true;
-    speak.mockClear();
-    prime!();
-    radioCheck();
-    expect(speak).not.toHaveBeenCalled();
-    // out of link mode both speak again (the primer is a silent utterance)
-    sfx.linkMode = false;
-    prime!();
-    expect(speak).toHaveBeenCalledTimes(1);
-    radioCheck();
-    expect(speak).toHaveBeenCalledTimes(2);
-    expect((speak.mock.calls[1]![0] as { text: string }).text).toBe("Radio check");
+  it("leaves recorded radio unloaded in link mode and stops a line on entry", async () => {
+    const fetchBank = vi.fn(async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(1) }));
+    vi.stubGlobal("fetch", fetchBank);
+    try {
+      const { radioVoice } = await import("../src/game/radio-voice");
+      sfx.linkMode = true;
+      sfx.unlock();
+      expect(radioVoice.play("radio-check", 0, () => {})).toBeNull();
+      expect(fetchBank).not.toHaveBeenCalled();
+      sfx.linkMode = false;
+      await vi.waitFor(() => expect(radioVoice.waiting).toBe(false));
+      expect(radioVoice.play("radio-check", 0, () => {})).toBeGreaterThan(0);
+      const engine = sfx.engine!.ctx as unknown as FContext;
+      const source = engine.nodes.find((n) => n instanceof FSource) as FSource;
+      expect(source.start).toHaveBeenCalledOnce();
+      sfx.linkMode = true;
+      expect(source.stop).toHaveBeenCalledOnce();
+      expect(radioVoice.play("radio-check", 0, () => {})).toBeNull();
+    } finally {
+      sfx.linkMode = false;
+      vi.unstubAllGlobals();
+    }
   });
 
   it("is never saved", () => {

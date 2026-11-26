@@ -74,7 +74,7 @@ export interface AudioSettings {
   music: boolean;
   sfx: boolean;
   voice: boolean;
-  /** The announcer speaks (speechSynthesis); off = "chirps only": unit voices and radio codes, no words. */
+  /** The announcer plays recorded lines; off = "chirps only": unit voices and radio codes, no words. */
   speech: boolean;
 }
 
@@ -315,9 +315,7 @@ export class Sfx {
 
   /**
    * Link mode (a sound duel, from the Duel tap or the rematch boot until the
-   * player leaves): no spoken lines (the announcer, radioCheck and the speech
-   * priming skip speech; entering it cancels any line mid-word) and the
-   * music skips its reverb. Transient: never saved. Changing it notifies
+   * player leaves): recorded lines stop, and the music skips its reverb. Transient: never saved. Changing it notifies
    * onChange subscribers.
    */
   get linkMode(): boolean {
@@ -327,13 +325,6 @@ export class Sfx {
   set linkMode(on: boolean) {
     if (on === this.link) return;
     this.link = on;
-    if (on && typeof window !== "undefined") {
-      try {
-        window.speechSynthesis?.cancel();
-      } catch {
-        /* ignore */
-      }
-    }
     for (const fn of this.changeFns) fn(this.settings);
   }
 
