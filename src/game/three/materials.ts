@@ -215,6 +215,7 @@ function modelMaterial(v: VariantSpec, elite: boolean, canopy = false, clear = f
     uFlashLit: { value: v.flashLit ?? 0 },
     uDesat: { value: v.desat ?? 0 },
     uSheen: elite ? eliteUniform : { value: v.sheen ?? 0 },
+    uSurfaceFinish: { value: canopy || v.ghost || v.roughness !== undefined ? 0 : 1 },
     uSheenColor: { value: new THREE.Color(v.sheenColor ?? 0xffffff).multiplyScalar(elite ? ELITE_SHEEN : 1) }
   };
   return fogged(m, {
@@ -232,7 +233,8 @@ function modelMaterial(v: VariantSpec, elite: boolean, canopy = false, clear = f
           `#include <common>
           varying float vGlow;${canopy ? CANOPY_FRAG_DECL : ""}
           uniform vec3 uTint; uniform float uFlash; uniform vec3 uFlashColor; uniform float uGlowK; uniform float uBleach;
-          uniform float uFlashLit; uniform float uDesat; uniform float uSheen; uniform vec3 uSheenColor;`
+          uniform float uFlashLit; uniform float uDesat; uniform float uSheen; uniform vec3 uSheenColor;
+          uniform float uSurfaceFinish;`
         )
         // lamps light themselves: less lit diffuse, more emission, so they stay saturated under tone mapping
         .replace(
@@ -241,6 +243,21 @@ function modelMaterial(v: VariantSpec, elite: boolean, canopy = false, clear = f
           diffuseColor.rgb = mix( diffuseColor.rgb, vec3( dot( diffuseColor.rgb, vec3( 0.3, 0.59, 0.11 ) ) ), uDesat ) * uTint;
           vec3 glowBase = diffuseColor.rgb;
           diffuseColor.rgb *= 1.0 - min( 1.0, vGlow * uGlowK ) * 0.8;`
+        )
+        .replace(
+          "#include <roughnessmap_fragment>",
+          `#include <roughnessmap_fragment>
+          // Coloured panels and dark rubber stay matte. Neutral midtones on exposed fittings catch the light.
+          float brightest = max( glowBase.r, max( glowBase.g, glowBase.b ) );
+          float chroma = ( brightest - min( glowBase.r, min( glowBase.g, glowBase.b ) ) ) / max( brightest, 0.01 );
+          float steel = uSurfaceFinish * ( 1.0 - smoothstep( 0.18, 0.52, chroma ) )
+            * smoothstep( 0.028, 0.18, brightest ) * ( 1.0 - min( 1.0, vGlow ) );
+          roughnessFactor = clamp( roughnessFactor + 0.035 * uSurfaceFinish - 0.30 * steel, 0.44, 1.0 );`
+        )
+        .replace(
+          "#include <metalnessmap_fragment>",
+          `#include <metalnessmap_fragment>
+          metalnessFactor = clamp( metalnessFactor - 0.055 * uSurfaceFinish + 0.26 * steel, 0.0, 0.56 );`
         )
         .replace(
           "#include <emissivemap_fragment>",

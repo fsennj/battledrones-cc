@@ -13,6 +13,7 @@ here are exactly the turret numbers in the TS builder.
 import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+from building_detail import CONCRETE, RECESS, STEEL, export_building, threshold
 
 WHITE = 0xD6DBE1     # models.ts WHITE (missile tubes)
 NOSE = 0xC8402E      # models.ts nose-cone red
@@ -21,29 +22,39 @@ PITCH = 0.34         # launcher elevation, same as the TS builder
 
 # ---------------------------------------------------------------- hull ----
 H = []
-H.append(box((0.86, 0.18, 0.86), (0, 0.09, 0), GM_D, 0.025, taper=0.06))          # pad
-for x in (-0.34, 0.34):                                                            # corner team pads
-    for z in (-0.34, 0.34):
-        H.append(box((0.14, 0.03, 0.14), (x, 0.19, z), T_MAIN, 0.01))
-H.extend(pair_box((0.03, 0.06, 0.4), (0.43, 0.1, 0), T_MAIN, bevel=0.006))        # side strips
-hull = join(H, "hull", ao=(0.3, 0.38))
+H.append(octo(0.945, 0.945, 0.13, 0.045, (0, 0.065, 0), GM_D))
+H.append(octo(0.879, 0.879, 0.039, 0.025, (0, 0.147, 0), CONCRETE))
+for x in (-0.277, 0.277):                                                          # corner team pads
+    for z in (-0.277, 0.277):
+        H.append(octo(0.153, 0.153, 0.047, 0.11, (x, 0.18, z), T_MAIN))
+        H.append(light((x, 0.205, z), 0.03))
+H.extend(pair_box((0.03, 0.05, 0.41), (0.435, 0.105, 0), T_DARK, bevel=0.006))
+H.extend(threshold(0, 0.179, 0.365, 0.45, 0.074, 4))
+join(H, "hull", ao=(0.3, 0.38))
 
 # -------------------------------------------------------------- turret ----
 # local to the yaw pivot (0, 0.18, 0): identical coordinates to the TS turret block
 T = []
-T.append(drum(0.25, 0.22, 0.08, 8, (0, 0.04, 0), GM, 0.015))                       # turntable
-T.extend(pair_box((0.04, 0.22, 0.12), (0.21, 0.17, 0.02), GM_D, bevel=0.008))     # elevation brackets
-T.append(box((0.36, 0.2, 0.42), (0, 0.26, -0.02), GM, 0.02, rot=(PITCH, 0, 0)))   # launcher body
-T.extend(pair_box((0.02, 0.1, 0.36), (0.185, 0.27, -0.02), T_MAIN, bevel=0.004, rot=(PITCH, 0, 0)))
-T.append(box((0.3, 0.02, 0.26), (0, 0.364, 0.02), T_MAIN, 0.004, rot=(PITCH, 0, 0)))  # top plate
+T.append(drum(0.252, 0.216, 0.069, 12, (0, 0.035, 0), GM, 0.013))
+T.append(cyl(0.21, 0.22, 0.018, 12, (0, 0.065, 0), STEEL))
+T.extend(pair_box((0.057, 0.22, 0.148), (0.213, 0.171, 0.043), GM_D, bevel=0.008))
+for x in (-0.245, 0.245):
+    T.append(cyl(0.066, 0.066, 0.02, 10, (x, 0.216, 0.046), STEEL, rot=(0, 0, math.pi / 2)))
+    T.append(cyl(0.041, 0.041, 0.023, 10, (x * 1.04, 0.216, 0.046), T_DARK, rot=(0, 0, math.pi / 2)))
+T.append(box((0.352, 0.192, 0.31), (0, 0.258, 0.06), GM_D, 0.02, rot=(PITCH, 0, 0)))
+T.extend(pair_box((0.026, 0.113, 0.37), (0.184, 0.275, -0.016), T_MAIN, bevel=0.004, rot=(PITCH, 0, 0)))
+T.append(box((0.317, 0.028, 0.234), (0, 0.36, 0.04), T_MAIN, 0.005, rot=(PITCH, 0, 0)))
+T.append(box((0.277, 0.026, 0.043), (0, 0.393, -0.046), RECESS, 0.004, rot=(PITCH, 0, 0)))
+T.append(light((0, 0.418, -0.043), 0.032))
 for x in (-0.11, 0, 0.11):                       # six missiles, two staggered rows
     for y in (0.21, 0.3):
         base = (x, y, 0.12)
-        T.append(barrel(base, 0.032, 0.42, PITCH, WHITE, 6))
+        T.append(barrel(base, 0.031, 0.42, PITCH, WHITE, 8))
+        T.append(tube(0.038, 0.07, 8, tip(base, 0.279, PITCH), GM_L, rot=(PITCH, 0, 0)))
         tp = tip(base, 0.42, PITCH)
         T.append(cone(0.032, 0.07, 6, (tp[0], tp[1] + math.sin(PITCH) * 0.035,
                                        tp[2] - math.cos(PITCH) * 0.035), NOSE,
                       rot=(PITCH - math.pi / 2, 0, 0)))
-turret = join(T, "turret")
+join(T, "turret")
 
-export_and_preview(hull, turret, "sam-site", ortho=1.35)
+export_building("sam-site")

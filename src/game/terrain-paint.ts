@@ -45,22 +45,22 @@ interface Palette {
 // colours from the built-in maps' painted art (per-terrain medians, see art/terrain.py for the looks)
 const PAL: Record<Biome, Palette> = {
   temperate: {
-    ground: hex(0x5e7826), ground2: hex(0x6e7430), cover: 0.35,
-    rough: hex(0x6a5236), rough2: hex(0x4e3f2a),
-    rockLit: hex(0x86827a), rock: hex(0x605d57), rockDark: hex(0x34322f),
+    ground: hex(0x657b38), ground2: hex(0x826a4c), cover: 0.26,
+    rough: hex(0x695645), rough2: hex(0x574a39),
+    rockLit: hex(0x929086), rock: hex(0x6c6b62), rockDark: hex(0x383a36),
     scrap: hex(0x4d4528), rust: hex(0x8c4a22), metal: hex(0x8a8c88),
     bank: hex(0x2f7476), water: hex(0x0f4a5e), abyss: hex(0x0b3550), foam: hex(0xc8dcd4),
-    road: hex(0x77705f), curb: hex(0x4f4a3e),
+    road: hex(0x756f65), curb: hex(0x544d42),
     forest: hex(0x34431b), moss: hex(0x4e5f22), needles: hex(0x6c6a2c),
     crystalBed: hex(0x4a4a2a), crystal: hex(0x5fd8c8), glint: hex(0xe8fff8),
-    deck: hex(0x8a7a64), rail: hex(0x4a3c2e),
+    deck: hex(0x8e775b), rail: hex(0x594a38),
     shallows: hex(0x5f8a7c), stones: hex(0x8a8a78),
-    wet: 0.28, grain: 0.07, low: 0.08
+    wet: 0.28, grain: 0.045, low: 0.12
   },
   desert: {
-    ground: hex(0xc48f54), ground2: hex(0xdcae6e), cover: 0.4,
-    rough: hex(0x8c6d4f), rough2: hex(0x6e5238),
-    rockLit: hex(0xc8774a), rock: hex(0x9c5734), rockDark: hex(0x5a2c1a),
+    ground: hex(0xc79860), ground2: hex(0xa98159), cover: 0.32,
+    rough: hex(0x8c6d4f), rough2: hex(0x775c43),
+    rockLit: hex(0xc6835b), rock: hex(0x9c623f), rockDark: hex(0x613724),
     scrap: hex(0x73573e), rust: hex(0x9a4a22), metal: hex(0x9a948a),
     bank: hex(0x3a9a90), water: hex(0x146c7a), abyss: hex(0x0e5468), foam: hex(0xeee8d0),
     road: hex(0x957552), curb: hex(0x6a5038),
@@ -68,12 +68,12 @@ const PAL: Record<Biome, Palette> = {
     crystalBed: hex(0x7a6240), crystal: hex(0x6ee0d0), glint: hex(0xfff8e8),
     deck: hex(0x9e7852), rail: hex(0x5a4028),
     shallows: hex(0x6fb0a0), stones: hex(0xb08a60),
-    wet: 0.3, grain: 0.06, low: 0.07
+    wet: 0.3, grain: 0.04, low: 0.09
   },
   arctic: {
-    ground: hex(0xc8d6ee), ground2: hex(0xe6eef9), cover: 0.3,
-    rough: hex(0x7c7c86), rough2: hex(0xa8b0c0),
-    rockLit: hex(0x8a92a0), rock: hex(0x4a505c), rockDark: hex(0x262a34),
+    ground: hex(0xd9e3ef), ground2: hex(0xacbdd4), cover: 0.18,
+    rough: hex(0x737a83), rough2: hex(0x9aa8b9),
+    rockLit: hex(0x8e9aaa), rock: hex(0x535e6c), rockDark: hex(0x252c38),
     scrap: hex(0x6e707a), rust: hex(0x7a4a34), metal: hex(0x9aa0aa),
     bank: hex(0x46688a), water: hex(0x1e3a5a), abyss: hex(0x132a46), foam: hex(0xe8f2ff),
     road: hex(0x8a8e98), curb: hex(0x5e626c),
@@ -81,24 +81,24 @@ const PAL: Record<Biome, Palette> = {
     crystalBed: hex(0x66727a), crystal: hex(0x7ae8e0), glint: hex(0xffffff),
     deck: hex(0x735f50), rail: hex(0x3a3430),
     shallows: hex(0x86a8cc), stones: hex(0xb8c4d4),
-    wet: 0.12, grain: 0.045, low: 0.05
+    wet: 0.12, grain: 0.028, low: 0.04
   },
   volcanic: {
-    ground: hex(0x504b47), ground2: hex(0x413c39), cover: 0.45,
-    rough: hex(0x6c4232), rough2: hex(0x523228),
-    rockLit: hex(0x4a4240), rock: hex(0x2a2423), rockDark: hex(0x141010),
+    ground: hex(0x565253), ground2: hex(0x454142), cover: 0.36,
+    rough: hex(0x65493d), rough2: hex(0x4e3a33),
+    rockLit: hex(0x635852), rock: hex(0x373438), rockDark: hex(0x17171b),
     scrap: hex(0x3f2d24), rust: hex(0x8a3e1c), metal: hex(0x6e6a66),
     // lava: crust at the banks, molten toward the middle (glow below)
     bank: hex(0x3a2a22), water: hex(0x6a2c14), abyss: hex(0x7a3014), foam: hex(0xffc050),
-    road: hex(0x3c3735), curb: hex(0x221e1c),
+    road: hex(0x57504a), curb: hex(0x38312d),
     forest: hex(0x3e3532), moss: hex(0x524842), needles: hex(0x1e1816),
     crystalBed: hex(0x3e3328), crystal: hex(0xe070ff), glint: hex(0xfff0ff),
     deck: hex(0x6c6660), rail: hex(0x34302c),
     shallows: hex(0x4a3226), stones: hex(0x2a2220),
-    wet: 0, grain: 0.07, low: 0.06
+    wet: 0, grain: 0.05, low: 0.1
   },
   tropical: {
-    ground: hex(0x86a056), ground2: hex(0xe2d8b2), cover: 0.12,
+    ground: hex(0x8b9d63), ground2: hex(0xe0d3af), cover: 0.13,
     rough: hex(0x6a6650), rough2: hex(0x52503e),
     rockLit: hex(0xc2bcaa), rock: hex(0x8c8778), rockDark: hex(0x4e5048),
     scrap: hex(0x62644d), rust: hex(0x8a5230), metal: hex(0x9a9c94),
@@ -108,7 +108,7 @@ const PAL: Record<Biome, Palette> = {
     crystalBed: hex(0x5a613e), crystal: hex(0x60f0d8), glint: hex(0xffffff),
     deck: hex(0x8a735a), rail: hex(0x4a3c2e),
     shallows: hex(0x5cd6c4), stones: hex(0xd8d0b0),
-    wet: 0.22, grain: 0.06, low: 0.06
+    wet: 0.22, grain: 0.04, low: 0.1
   }
 };
 
@@ -351,6 +351,8 @@ export function paintTerrainPixels(
   const beach = biome === "tropical";
   const arctic = biome === "arctic";
   const steel = biome === "volcanic";
+  const turf = biome === "temperate" || beach;
+  const sand = biome === "desert";
   const pxSalt = Math.imul(seed | 0, 0x27d4eb2d) ^ px;
   // the colour of the terrain being shaded (a typed array: doubles in closure slots would be boxed per write)
   const C = new Float64Array(3);
@@ -378,8 +380,10 @@ export function paintTerrainPixels(
   const bx = new Float64Array(3);
   const by = new Float64Array(3);
   let n = 0;
+  let roadM = 0;
   /** Gather a tile's B-spline weight by terrain. */
   const add = (t: number, wt: number) => {
+    if (t === ROAD) roadM += wt;
     for (let q = 0; q < n; q++)
       if (tt[q] === t) {
         mm[q] = mm[q]! + wt;
@@ -455,6 +459,7 @@ export function paintTerrainPixels(
       const vt = Math.min(S - 1, Math.max(0, Math.floor(v)));
       const ck = cj * S + ci;
       n = 0;
+      roadM = 0;
       // on a slanted bridge's straight deck: where, in its frame (along, across from its centre)
       const dk = DECK[vt * S + ut]!;
       let onDeck = false;
@@ -474,6 +479,7 @@ export function paintTerrainPixels(
         n = 1;
       } else if (SAME[ck]) {
         tt[0] = grid[ck]!;
+        if (tt[0] === ROAD) roadM = 1;
         mm[0] = ww[0] = 1;
         n = 1;
       } else {
@@ -508,10 +514,18 @@ export function paintTerrainPixels(
         switch (t) {
           case GROUND:
           case CRYSTAL: {
-            const lo = vn(T, u * 0.22 + 5.5, v * 0.22 + 9.2) * 0.7 + vn(T, u * 0.9 + 1.3, v * 0.9 + 2.7) * 0.3;
+            const lo = vn(T, u * 0.22 + 5.5, v * 0.22 + 9.2) * 0.56 + vn(T, u * 0.9 + 1.3, v * 0.9 + 2.7) * 0.44;
             const mid = 0.5 + (0.5 - P.cover) * 0.6;
-            mix3(P.ground, P.ground2, smooth(mid - 0.09, mid + 0.09, lo));
-            mul(0.9 + vn(T, u * 2.3 + 7.7, v * 2.3 + 1.1) * 0.2);
+            const cover = smooth(mid - 0.075, mid + 0.1, lo);
+            const patches = vn(T, u * 2.3 + 7.7, v * 2.3 + 1.1);
+            mix3(P.ground, P.ground2, cover);
+            mul(0.89 + patches * 0.22);
+            // Grass stems, wind-rippled sand and wind-scoured ash or snow have different grain directions.
+            const relief = turf
+              ? vn(T, u * 11.1 + v * 4.4 + 19.1, v * 3.7 + 39.4)
+              : vn(T, u * 0.81 + v * 0.4 + 21.3, v * (sand ? 7.9 : 4.2) - u * 2.6 + 11.7);
+            mul(1 + (relief - 0.5) * (1 - cover * 0.75) * (turf ? 0.16 : arctic ? 0.055 : 0.12));
+            if (turf) toward(P.moss, smooth(0.53, 0.77, patches) * (1 - cover) * 0.25);
             if (beach) toward(P.ground2, smooth(-1.45, -0.85, sd - (vn(T, u * 1.4, v * 1.4) - 0.5) * 0.5));
             if (t === CRYSTAL) {
               // a crystal bed: darker ground studded with glinting shards
@@ -522,7 +536,7 @@ export function paintTerrainPixels(
                 toward(P.crystal, shard * (0.55 + 0.35 * vn(T, u * 2 + 9, v * 2 + 9)));
                 if (g2 > 0.93) toward(P.glint, shard * 0.8);
               }
-            } else if (g2 > 0.985) toward(P.stones, 0.5);
+            } else if (relief > 0.72 && g2 > 0.89) toward(P.stones, 0.32);
             break;
           }
           case ROUGH: {
@@ -542,9 +556,11 @@ export function paintTerrainPixels(
             const lit = clamp01(0.5 + (h0 - h1) * 1.4);
             if (lit < 0.5) mix3(P.rockDark, P.rock, lit * 2);
             else mix3(P.rock, P.rockLit, (lit - 0.5) * 2);
-            mul(0.92 + g1 * 0.16);
-            // lichen / snow / ash in the hollows
-            if (arctic) toward(P.ground2, smooth(0.6, 0.75, vn(T, u * 1.7 + 8.1, v * 1.7 + 2.9)) * 0.7);
+            const beds = vn(T, u * 1.4 + 2.8, v * (sand ? 10.4 : 6.8) - u * 3.4 + 4.3);
+            mul(0.88 + beds * 0.24);
+            // Snow settles in sheltered cracks. Granite and limestone retain mottled weathering.
+            if (arctic) toward(P.ground2, smooth(0.57, 0.78, vn(T, u * 1.7 + 8.1, v * 1.7 + 2.9)) * 0.55);
+            else if (turf) toward(P.moss, smooth(0.55, 0.79, beds) * 0.14);
             break;
           }
           case SCRAP: {
@@ -598,12 +614,13 @@ export function paintTerrainPixels(
             break;
           }
           case ROAD: {
-            mix3(P.road, P.rough, vn(T, u * 1.2 + 8.8, v * 1.2 + 4.4) * 0.3);
-            // worn edges: darker kerb lines just inside the track's sides
-            const edge = smooth(0.48, 0.55, memb) * (1 - smooth(0.6, 0.72, memb));
-            toward(P.curb, edge * 0.55);
-            mul(0.94 + vn(T, u * 4.4 + 2.2, v * 4.4 + 2.2) * 0.12);
-            if (g2 > 0.94) toward(P.stones, 0.35);
+            mix3(P.road, P.rough, vn(T, u * 1.2 + 8.8, v * 1.2 + 4.4) * 0.18);
+            const lip = smooth(0.51, 0.57, memb) * (1 - smooth(0.61, 0.71, memb));
+            const gravel = vn(T, u * 6.7 + 2.2, v * 6.7 + 2.2);
+            toward(P.curb, (1 - smooth(0.42, 0.6, memb)) * 0.7);
+            toward(P.stones, lip * (0.10 + 0.3 * gravel));
+            mul(0.94 + gravel * 0.12);
+            if (g2 > 0.94) toward(P.stones, 0.22);
             break;
           }
           case FOREST: {
@@ -640,20 +657,31 @@ export function paintTerrainPixels(
               if (Math.abs(fl - 0.12) < 0.03 && Math.abs(fa - 0.25) < 0.03) toward(P.foam, 0.5);
             } else {
               // planks across the deck: dark seams, each plank its own tone and grain
-              const pa = along * 3.6;
+              const pa = along * 4.6;
               const pi = Math.floor(pa);
               const pf = pa - pi;
               const ph = ((Math.imul(pi, 0x9e3779b1) ^ Math.imul(ti, 0x85ebca6b)) >>> 0) / 4294967296;
+              const curl = vn(T, across * 5.8 + ph * 11.5, pi * 0.48 + 4.8);
+              const grain = Math.sin(pf * 12 + curl * 2.6 + ph * 9);
               mix3(P.deck, P.rail, ph * 0.35);
-              mul(0.92 + vn(T, (onDeck ? across : hz ? v : u) * 9 + pi * 3.1, pa * 0.4) * 0.16);
-              if (pf < 0.1) mul(0.55);
-              if (arctic) toward(P.ground2, smooth(0.55, 0.7, vn(T, u * 2.4 + 1.1, v * 2.4 + 6.2)) * 0.8);
+              const gap = 1 - smooth(0.025, 0.18, Math.min(pf, 1 - pf));
+              const bevel = smooth(0.08, 0.21, pf) * (1 - smooth(0.25, 0.39, pf));
+              mul(0.97 + grain * 0.065 - gap * 0.54 + bevel * 0.13);
+              const endGrain = onDeck ? dhw - Math.abs(dv) : Math.min(fa, 1 - fa);
+              const pin = (1 - smooth(0.045, 0.19, Math.abs(pf - 0.51))) * (1 - smooth(0.02, 0.06, Math.abs(endGrain - 0.21)));
+              toward(P.rail, pin * 0.65);
+              if (arctic) toward(P.ground2, smooth(0.53, 0.78, curl) * (1 - smooth(0.1, 0.44, endGrain)) * 0.45);
             }
             if (railLo || railHi) mix3(P.rail, P.deck, 0.15 + (railLo ? 0.25 : 0));
             break;
           }
           default:
             mix3(P.ground, P.ground, 0);
+        }
+        if (roadM > 0.02 && (t === GROUND || t === ROUGH)) {
+          const shoulder = smooth(0.02, 0.43, roadM) * (0.82 + 0.18 * g2);
+          toward(P.rough, shoulder * 0.38);
+          mul(1 - shoulder * 0.17);
         }
         // land beside the water: wet, darker banks (lava scorches instead)
         if (sd > -1.2 && t !== WATER && t !== DEEP && t !== SHALLOWS && t !== BRIDGE) {

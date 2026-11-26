@@ -66,14 +66,12 @@ for (const { kind, faction } of jobs) {
   const turn = opt.turn ?? f.turn;
   const solo = "solo" in opt || f.solo;
   const head = opt.head ?? f.head ?? 0;
-  const shots = [];
-  for (const bg of ["#000000", "#ffffff"]) {
-    const q = `icon=${kind}&bg=${encodeURIComponent(bg)}&pitch=${pitch}&turn=${turn}&head=${head}&faction=${faction}${solo ? "&solo" : ""}`;
-    await page.goto(`${url}?${q}`, { waitUntil: "networkidle" });
-    await page.waitForFunction(() => window.ready, null, { timeout: 30000 });
-    await page.waitForTimeout(500);
-    shots.push(`data:image/png;base64,${(await page.screenshot()).toString("base64")}`);
-  }
+  const q = `icon=${kind}&bg=%23000000&pitch=${pitch}&turn=${turn}&head=${head}&faction=${faction}&t=0${solo ? "&solo" : ""}`;
+  await page.goto(`${url}?${q}`, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => window.ready && typeof window.gallery?.background === "function", null, { timeout: 30000 });
+  const black = `data:image/png;base64,${(await page.screenshot()).toString("base64")}`;
+  await page.evaluate(() => window.gallery.background("#ffffff"));
+  const white = `data:image/png;base64,${(await page.screenshot()).toString("base64")}`;
   const { webp, clipped } = await page.evaluate(async ([black, white, P]) => {
     const load = async (src) => {
       const img = new Image();
@@ -105,6 +103,7 @@ for (const { kind, faction } of jobs) {
         y0 = Math.min(y0, py); y1 = Math.max(y1, py);
       }
     }
+    if (x1 < x0 || y1 < y0) throw new Error("The portrait scene rendered an empty silhouette");
     const src = document.createElement("canvas");
     src.width = w;
     src.height = h;
@@ -168,7 +167,7 @@ for (const { kind, faction } of jobs) {
     g.putImageData(img, 0, 0);
     // (a model touching the edge of the shot was cut off by the gallery's framing)
     return { webp: dst.toDataURL("image/webp", 0.85), clipped: x0 === 0 || y0 === 0 || x1 === w - 1 || y1 === h - 1 };
-  }, [...shots, { SIZE, FIT, GAMMA, GAIN, RIM_R, RIM, RIM_A }]);
+  }, [black, white, { SIZE, FIT, GAMMA, GAIN, RIM_R, RIM, RIM_A }]);
   const dir = faction === "blue" ? out : `${out}/${faction}`;
   mkdirSync(dir, { recursive: true });
   const file = `${dir}/${kind}.webp`;

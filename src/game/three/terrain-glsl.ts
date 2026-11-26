@@ -289,33 +289,53 @@ export function patchLiquid(s: Shader, u: LiquidUniforms): void {
       float od = bdOutside( vXZ );
       float dk = smoothstep( 0.0, 0.32, vDepth );
       vec3 lavaGlow = vec3( 0.0 );
+      vec2 waterTilt = vec2( 0.0 );
       vec3 wc;
       float alpha;
       if ( uMode < 0.5 ) {
-        // open water: depth tint, slow swells, and a shoreline that laps in and out
+        // Broad swells carry a second set of shorter ripples. Fade the latter
+        // when they are smaller than a pixel in the strategic overview.
         float n1 = texture2D( uTNoise, vXZ * 0.06 + vec2( uWT * 0.009, uWT * 0.005 ) ).r;
         float n2 = texture2D( uTNoise, vXZ * 0.11 - vec2( uWT * 0.007, -uWT * 0.011 ) ).g;
         float n = ( n1 + n2 ) * 0.5;
-        wc = mix( uShallow, uDeep, dk ) * ( 0.84 + 0.32 * n );
-        // past the coastal shelf the open sea falls away into the abyss colour (rivers never get this deep)
-        wc = mix( wc, uAbyss * ( 0.9 + 0.2 * n ), smoothstep( 0.5, 1.12, vDepth ) );
-        alpha = mix( 0.2, 0.9, dk );
-        // the reef crest: surf breaking where the shelf drops into the open sea (only open sea gets this deep)
-        float crest = ( 1.0 - smoothstep( 0.0, 0.07, abs( vDepth - 0.58 ) ) ) * ( 0.55 + 0.45 * sin( uWT * 0.9 + n * 8.0 ) )
-          * smoothstep( 0.3, 0.62, n2 );
-        wc = mix( wc, vec3( 0.95, 0.99, 0.98 ), crest * 0.7 );
-        alpha = max( alpha, crest * 0.75 );
-        float lap = 0.045 + 0.02 * sin( uWT * 1.4 + n * 10.0 );
-        float foam = ( 1.0 - smoothstep( 0.0, lap, vDepth ) ) * ( 0.55 + 0.45 * n );
-        float line = ( 1.0 - smoothstep( 0.0, 0.03, abs( vDepth - lap - 0.045 ) ) ) * smoothstep( 0.45, 0.65, n2 );
-        foam = max( foam, line * 0.4 );
-        // Refracted light on the shallow bed, broken up by the same swells as the foam.
-        vec2 bent = vXZ * 0.23 + ( vec2( n1, n2 ) - 0.5 ) * 0.16 + vec2( uWT * 0.006, -uWT * 0.004 );
-        float caustic = 1.0 - smoothstep( 0.01, 0.10, texture2D( uTNoise, bent ).b );
-        float shelf = smoothstep( 0.035, 0.1, vDepth ) * ( 1.0 - smoothstep( 0.17, 0.31, vDepth ) );
-        wc += uShallow * ( caustic * shelf * 0.42 );
-        wc = mix( wc, vec3( 0.9, 0.95, 0.96 ), foam );
-        alpha = max( alpha, foam * 0.8 );
+        float footprint = max( length( dFdx( vXZ ) ), length( dFdy( vXZ ) ) );
+        float close = 1.0 - smoothstep( 0.07, 0.32, footprint );
+        float swell = dot( vXZ, vec2( 1.62, 0.7 ) ) - uWT * 0.88 + n1 * 5.0;
+        float crossSwell = dot( vXZ, vec2( -0.91, 2.07 ) ) + uWT * 0.65 + n2 * 4.2;
+        float ripple = dot( vXZ, vec2( 5.8, -4.3 ) ) - uWT * 1.45 + n2 * 7.0;
+        waterTilt = vec2( 0.12, 0.05 ) * cos( swell ) + vec2( -0.048, 0.105 ) * cos( crossSwell )
+          + vec2( 0.064, -0.056 ) * cos( ripple ) * close;
+
+        float ocean = smoothstep( 0.45, 1.16, vDepth );
+        wc = mix( mix( uShallow, uDeep, dk ), uAbyss, ocean );
+        wc *= 0.86 + 0.23 * n + 0.055 * sin( crossSwell ) + 0.05 * sin( swell );
+        alpha = mix( 0.15, 0.94, dk );
+        vec3 view = normalize( cameraPosition - vFowW );
+        float reflection = pow( 1.0 - clamp( dot( view, normalize( vec3( waterTilt.x, 1.0, waterTilt.y ) ) ), 0.0, 1.0 ), 4.0 );
+        wc = mix( wc, vec3( 0.42, 0.63, 0.76 ), min( 0.48, reflection * 0.65 ) * dk );
+
+        // Foam collects in broken bands near shores and at the edge of a reef.
+        float surfaceNoise = texture2D( uTNoise, vXZ * 0.34 + vec2( uWT * 0.013, -uWT * 0.009 ) ).r;
+        float lap = 0.040 + 0.020 * sin( swell + uWT * 0.9 );
+        float depthPx = min( 0.016, fwidth( vDepth ) );
+        float lace = smoothstep( 0.23, 0.70, surfaceNoise );
+        float foam = ( 1.0 - smoothstep( 0.0, lap + depthPx, vDepth ) ) * ( 0.26 + lace * 0.60 );
+        float backwash = abs( vDepth - lap - 0.033 - 0.018 * sin( crossSwell ) );
+        foam = max( foam, ( 1.0 - smoothstep( 0.002, 0.017 + depthPx, backwash ) ) * lace * 0.42 );
+        float shelfBreak = abs( vDepth - 0.60 - 0.028 * sin( swell ) );
+        float crest = ( 1.0 - smoothstep( 0.01, 0.069, shelfBreak ) ) * smoothstep( 0.37, 0.73, n2 )
+          * ( 0.52 + 0.48 * sin( crossSwell ) );
+        foam = max( foam, crest * ( 0.32 + lace * 0.35 ) );
+
+        // Two interleaved patterns of light over the submerged bank and shallows.
+        vec2 bent = vXZ * 0.26 + waterTilt * 0.26 + vec2( uWT * 0.006, -uWT * 0.004 );
+        float c1 = texture2D( uTNoise, bent ).b;
+        float c2 = texture2D( uTNoise, bent.yx * 1.35 + vec2( 0.29, 0.64 ) ).b;
+        float caustic = ( 1.0 - smoothstep( 0.014, 0.105, min( c1, c2 ) ) ) * ( 0.55 + 0.45 * close );
+        float shelf = smoothstep( 0.018, 0.085, vDepth ) * ( 1.0 - smoothstep( 0.16, 0.38, vDepth ) );
+        wc += mix( uShallow, vec3( 0.31, 0.60, 0.44 ), 0.24 ) * ( caustic * shelf * 0.50 );
+        wc = mix( wc, vec3( 0.84, 0.91, 0.92 ), foam );
+        alpha = max( alpha, foam * 0.76 );
       } else if ( uMode > 1.5 ) {
         // icy sea: a solid shelf over the shallows breaking up into drifting floes over the deep
         vec2 wq = texture2D( uTNoise, vXZ * 0.031 + 0.5 ).rg - 0.5;
@@ -334,10 +354,11 @@ export function patchLiquid(s: Shader, u: LiquidUniforms): void {
         float shade = plate2 * ( 1.0 - plate );
         // each floe: snow-dusted in its middle, glassy blue toward its broken edge, hairline cracks
         float inner = smoothstep( gap, gap + 0.32, c.b );
-        float crack = 1.0 - smoothstep( 0.0, 0.025, texture2D( uTNoise, vXZ * 0.23 + wq * 0.3 ).b );
+        vec4 scratches = texture2D( uTNoise, vXZ * 0.29 + wq * 0.31 );
+        float crack = 1.0 - smoothstep( 0.008, 0.042, scratches.b );
         vec3 water = mix( uShallow * 0.5, uDeep, dk ) * ( 0.8 + 0.4 * n ) * ( 1.0 - shade * 0.4 );
-        vec3 ice = mix( vec3( 0.55, 0.73, 0.87 ), vec3( 0.92, 0.96, 1.0 ), smoothstep( 0.2, 0.75, inner * 0.85 + ( n - 0.5 ) * 0.7 ) );
-        ice *= 1.0 - crack * 0.2 * inner;
+        vec3 ice = mix( vec3( 0.31, 0.52, 0.69 ), vec3( 0.89, 0.94, 0.98 ), smoothstep( 0.06, 0.68, inner * 0.70 + ( n - 0.5 ) * 0.5 ) );
+        ice *= ( 0.91 + 0.16 * scratches.r ) * ( 1.0 - crack * 0.27 * inner );
         // (and its sunward, north-west rim catches the light)
         ice = mix( ice, vec3( 1.0 ), ( 1.0 - plate2 ) * 0.5 );
         // (submerged ice shows pale cyan just under the surface at each floe's edge)
@@ -354,7 +375,8 @@ export function patchLiquid(s: Shader, u: LiquidUniforms): void {
         // (it cools toward the banks: more crust there)
         float cool = 1.0 - smoothstep( 0.04, 0.3, vDepth );
         vec4 c = texture2D( uTNoise, vXZ * 0.095 + flow + ( h2 - 0.5 ) * 0.07 );
-        float rag = texture2D( uTNoise, vXZ * 0.7 + flow ).r - 0.5;
+        vec4 clinker = texture2D( uTNoise, vXZ * 0.70 + flow );
+        float rag = clinker.r - 0.5;
         float has = 1.0 - smoothstep( 0.42, 0.5, c.a * 0.55 + heat * 0.75 - cool * 0.35 );
         float crust = smoothstep( 0.1, 0.13, c.b + ( h2.y - 0.5 ) * 0.08 + rag * 0.07 ) * has;
         // yellow-hot veins wind along the flow (contours of the churn), in the hottest runs
@@ -366,7 +388,8 @@ export function patchLiquid(s: Shader, u: LiquidUniforms): void {
         vec3 seep = uDeep * ( 0.02 + 0.85 * edge * edge + 0.6 * split );
         lavaGlow = mix( open, seep, crust );
         lavaGlow *= smoothstep( 0.0, 0.08, vDepth ) * 0.7 + 0.3;
-        wc = mix( vec3( 0.008, 0.005, 0.004 ), vec3( 0.022, 0.015, 0.012 ) * ( 0.7 + 0.6 * h2.x ), crust );
+        vec3 solid = mix( vec3( 0.011, 0.009, 0.008 ), vec3( 0.046, 0.029, 0.021 ), clinker.g * ( 0.65 + 0.35 * h2.x ) );
+        wc = mix( vec3( 0.008, 0.005, 0.004 ), solid, crust );
         alpha = 1.0;
       }
       // (past the edge the water and ice thin away within a few tiles, so lakes don't double)
@@ -377,11 +400,7 @@ export function patchLiquid(s: Shader, u: LiquidUniforms): void {
       "#include <normal_fragment_maps>",
       /* glsl */ `#include <normal_fragment_maps>
       if ( uMode < 0.5 ) {
-        // wind ripples tilt the surface so the sun glints off it in small drifting patches
-        vec2 t1 = texture2D( uTNoise, vXZ * 0.47 + vec2( uWT * 0.03, uWT * 0.02 ) ).rg;
-        vec2 t2 = texture2D( uTNoise, vXZ * 0.33 - vec2( uWT * 0.024, -uWT * 0.033 ) ).gr;
-        vec2 tilt = ( t1 + t2 - 1.0 ) * 0.12;
-        normal = normalize( normal + ( viewMatrix * vec4( tilt.x, 0.0, tilt.y, 0.0 ) ).xyz );
+        normal = normalize( normal + ( viewMatrix * vec4( waterTilt.x, 0.0, waterTilt.y, 0.0 ) ).xyz );
       }`
     )
     .replace(

@@ -42,7 +42,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 from scipy import ndimage as ndi
 
-from textures import flatten, make_seamless, write_rock_textures
+from textures import flatten, make_seamless, resample_periodic, rock_material, write_rock_textures
 
 ROOT = Path(__file__).resolve().parent.parent
 MAPS_DIR = ROOT / "art" / "maps"
@@ -74,9 +74,8 @@ SUN_SLOPE = 0.85  # tan(sun elevation): shadow length == occluder height / SUN_S
 BIOMES: dict[str, dict] = {
     "temperate": dict(
         scale=dict(ground=0.42, ground2=0.44, rough=0.44, rock=0.48, liquid=0.55, road=0.36, forest=0.62),
-        ground2_cover=0.2,
-        ground_tint=(0.94, 0.93, 0.86), ground_sat=0.8, pebbles=0.35,
-        lowfreq=(0.07, 0.035),  # brightness, warm/cool amplitude
+        ground2_cover=0.25, pebbles=0.4,
+        lowfreq=(0.105, 0.065),  # brightness, warm/cool amplitude
         water=dict(
             near_mul=(0.95, 1.15, 1.05), near_add=(0.05, 0.10, 0.07),
             deep_mul=(0.62, 0.78, 0.86), deep_add=(0.0, 0.01, 0.03),
@@ -85,7 +84,7 @@ BIOMES: dict[str, dict] = {
             foam=(0.86, 0.92, 0.9), wet=0.28,
         ),
         rock_h=0.95, forest_h=0.5, tree_h=0.7,
-        rail=(0.74, 0.72, 0.68), deck_tint=(0.92, 0.92, 0.92),
+        rail=(0.47, 0.41, 0.34), deck="planks", wood=(0.57, 0.47, 0.36),
         stain=(0.8, 0.75, 0.7), crystal_tint=(0.9, 1.0, 0.92), road_curb=0.08,
         grade=dict(sat=1.08, contrast=1.06, lift=(0.0, 0.0, 0.01), gain=(1.02, 1.01, 0.98), gamma=1.0),
         shadow_col=(0.52, 0.56, 0.66), shadow_k=0.8,
@@ -97,7 +96,7 @@ BIOMES: dict[str, dict] = {
     "desert": dict(
         scale=dict(ground=0.42, ground2=0.45, rough=0.44, rock=0.52, liquid=0.55, road=0.36, forest=0.62),
         ground2_cover=0.30, pebbles=0.35,
-        lowfreq=(0.06, 0.03),
+        lowfreq=(0.08, 0.045),
         water=dict(
             near_mul=(1.0, 1.02, 0.98), near_add=(0.04, 0.05, 0.03),
             deep_mul=(0.42, 0.62, 0.75), deep_add=(0.0, 0.02, 0.05),
@@ -118,7 +117,7 @@ BIOMES: dict[str, dict] = {
     "arctic": dict(
         scale=dict(ground=0.44, ground2=0.46, rough=0.42, rock=0.48, liquid=0.6, road=0.34, forest=0.6),
         ground2_cover=0.12, ground2_max=0.6,
-        lowfreq=(0.045, 0.03),
+        lowfreq=(0.032, 0.045),
         water=dict(
             near_mul=(1.05, 1.12, 1.12), near_add=(0.05, 0.1, 0.12),
             deep_mul=(0.72, 0.8, 0.88), deep_add=(0.0, 0.0, 0.02),
@@ -139,7 +138,7 @@ BIOMES: dict[str, dict] = {
     "volcanic": dict(
         scale=dict(ground=0.44, ground2=0.46, rough=0.44, rock=0.5, liquid=0.6, road=0.42, forest=0.6),
         ground2_cover=0.34,
-        lowfreq=(0.08, 0.03),
+        lowfreq=(0.09, 0.04),
         water=dict(  # lava
             near_mul=(1.0, 1.0, 1.0), near_add=(0.0, 0.0, 0.0),
             deep_mul=(1.0, 1.0, 1.0), deep_add=(0.0, 0.0, 0.0),
@@ -163,10 +162,9 @@ BIOMES: dict[str, dict] = {
     # falling away past a line of surf into sapphire open sea (Terrain.Deep).
     "tropical": dict(
         scale=dict(ground=0.42, ground2=0.42, rough=0.44, rock=0.5, liquid=0.6, road=0.32, forest=0.6),
-        ground2_cover=0.18, ground2_tint=(1.03, 1.08, 1.06),
-        ground_tint=(0.79, 0.9, 0.85),
+        ground2_cover=0.13, ground2_tint=(1.0, 1.04, 1.02),
         beach=1.1,  # ground2 (white coral sand) forced into a band this many tiles wide along every wet edge
-        lowfreq=(0.05, 0.025),
+        lowfreq=(0.085, 0.055),
         water=dict(
             near_mul=(0.5, 1.18, 1.16), near_add=(0.0, 0.15, 0.14),
             deep_mul=(0.1, 0.5, 0.62), deep_add=(0.0, 0.03, 0.08), depth_reach=2.6,
@@ -201,7 +199,7 @@ BIOMES: dict[str, dict] = {
 # Per-map tweaks on top of the biome defaults.
 MAP_OVERRIDES: dict[str, dict] = {
     # Rocky, dry grassland: more exposed dirt, drier grass, more stones.
-    "proving-grounds": dict(ground2_cover=0.4, ground_tint=(1.0, 0.95, 0.78), ground_sat=0.72,
+    "proving-grounds": dict(ground2_cover=0.4, ground_tint=(1.08, 1.01, 0.89), ground_sat=0.8,
                             small_ground_p=0.05, ground2_scale_tiles=5.0, pebbles=1.0, rock_boulder_p=0.16),
 }
 
@@ -342,23 +340,36 @@ def _wrap_blur(a: np.ndarray, sigma: float) -> np.ndarray:
     return ndi.gaussian_filter(a, sigma, mode="wrap")
 
 
-FLATTEN = dict(ground=0.7, ground2=0.6, rough=0.6, rock=0.5, liquid=0.35, road=0.6, forest=0.5)
+FLATTEN = dict(ground=0.74, ground2=0.66, rough=0.64, liquid=0.35, road=0.7, forest=0.5)
+
+# Diffuse colour targets (RGB bytes), after balancing the source textures' coarse and fine detail.
+MATERIAL_TONES = {
+    "temperate": dict(ground=(101, 122, 50), ground2=(132, 109, 76), rough=(104, 87, 68), road=(113, 108, 98)),
+    "desert": dict(ground=(199, 153, 99), ground2=(167, 130, 87), rough=(137, 106, 75), road=(138, 114, 87)),
+    "arctic": dict(ground=(218, 226, 234), ground2=(176, 196, 217), rough=(112, 118, 124), road=(137, 146, 154)),
+    "volcanic": dict(ground=(87, 83, 83), ground2=(72, 68, 68), rough=(96, 72, 60), road=(115, 106, 96)),
+    "tropical": dict(ground=(143, 158, 102), ground2=(221, 209, 178), rough=(103, 93, 73), road=(139, 127, 110)),
+}
 
 
 def get_texture(biome: str, mat: str, scale: float) -> np.ndarray:
     key = (biome, mat, scale)
     if key in _TEX_CACHE:
         return _TEX_CACHE[key]
-    src = np.asarray(Image.open(RAW / f"tex-{biome}-{mat}.webp").convert("RGB"), np.float32) / 255.0
-    rng = np.random.default_rng([ord(c) for c in biome + mat])
-    a = make_seamless(src, rng, _wrap_blur)
-    a = flatten(a, FLATTEN.get(mat, 0.5), _wrap_blur)
-    N = a.shape[0]
-    n = max(16, int(round(N * scale)))
-    big = np.tile(a, (3, 3, 1))
-    im = Image.fromarray((np.clip(big, 0, 1) * 255 + 0.5).astype(np.uint8), "RGB")
-    im = im.resize((3 * n, 3 * n), Image.LANCZOS)
-    t = np.asarray(im, np.float32)[n:2 * n, n:2 * n] / 255.0
+    if mat == "rock":
+        a = rock_material(biome)
+    else:
+        src = np.asarray(Image.open(RAW / f"tex-{biome}-{mat}.webp").convert("RGB"), np.float32) / 255.0
+        rng = np.random.default_rng([ord(c) for c in biome + mat])
+        a = flatten(make_seamless(src, rng, _wrap_blur), FLATTEN[mat], _wrap_blur)
+        if mat in MATERIAL_TONES[biome]:
+            tone = np.asarray(MATERIAL_TONES[biome][mat], np.float32) / 255.0
+            L = lum(a)
+            soft = _wrap_blur(L, 4)
+            a += (tone - a.mean((0, 1))) * 0.8
+            a += (0.35 * (soft - _wrap_blur(L, 30)) - 0.4 * (L - soft))[..., None]
+    n = max(16, int(round(len(a) * scale)))
+    t = np.asarray(resample_periodic(a, n), np.float32) / 255.0
     _TEX_CACHE[key] = t
     return t
 
@@ -370,9 +381,9 @@ def dihedral(t: np.ndarray, k: int) -> np.ndarray:
 
 def tiled(t: np.ndarray, H: int, W: int, k: int, oy: int, ox: int) -> np.ndarray:
     v = dihedral(t, k)
-    n = v.shape[0]
-    reps = (int(math.ceil((H + n) / n)), int(math.ceil((W + n) / n)))
-    return np.tile(v, (reps[0], reps[1], 1))[oy % n: oy % n + H, ox % n: ox % n + W]
+    ys = (np.arange(H) + oy) % len(v)
+    xs = (np.arange(W) + ox) % len(v)
+    return v[ys[:, None], xs]
 
 
 def tex_layer(t: np.ndarray, H: int, W: int, rng, noise: Noise, variants: int = 3, feat: float = 4.5 * PX,
@@ -381,18 +392,48 @@ def tex_layer(t: np.ndarray, H: int, W: int, rng, noise: Noise, variants: int = 
     n = t.shape[0]
     ks = rng.permutation(8)[:variants]
     m = t.mean((0, 1))
-    num = np.zeros((H, W, 3), np.float32)
-    ws = []
-    for i in range(variants):
-        w = np.exp(sharp * noise.fbm(H // 4, W // 4, feat / 4, octaves=2))
-        ws.append(upsample(w, H, W))
-    tot = sum(ws)
-    sq = np.zeros((H, W), np.float32)
-    for i in range(variants):
-        w = ws[i] / tot
-        num += (tiled(t, H, W, int(ks[i]), int(rng.integers(n)), int(rng.integers(n))) - m) * w[..., None]
-        sq += w * w
-    return np.clip(m + num / np.sqrt(sq)[..., None], 0.0, 1.0)
+    ws = [upsample(np.exp(sharp * noise.fbm(H // 4, W // 4, feat / 4, octaves=2)), H, W) for _ in ks]
+    sources = [(dihedral(t, int(k)), int(rng.integers(n)), int(rng.integers(n))) for k in ks]
+    out = np.empty((H, W, 3), np.float32)
+    # The common weight sum cancels in variance-preserving blending. Accumulate
+    # in row bands to avoid several full RGB temporaries on the largest map.
+    for y in range(0, H, 128):
+        block = out[y:y + 128]
+        block.fill(0)
+        sq = np.zeros(block.shape[:2], np.float32)
+        for w, (source, oy, ox) in zip(ws, sources):
+            weight = w[y:y + len(block)]
+            iy = (np.arange(y, y + len(block)) + oy) % n
+            ix = (np.arange(W) + ox) % n
+            block += (source[iy[:, None], ix] - m) * weight[..., None]
+            sq += weight * weight
+        block /= np.sqrt(sq)[..., None]
+        np.clip(block + m, 0.0, 1.0, out=block)
+    return out
+
+
+def blend_into(base: np.ndarray, layer: np.ndarray, opacity: np.ndarray) -> None:
+    """RGB over a map with a scalar opacity field, without full-map RGB temporaries."""
+    rest = 1 - opacity
+    for c in range(3):
+        base[..., c] *= rest
+        base[..., c] += layer[..., c] * opacity
+
+
+def ground_relief(img: np.ndarray, soil: np.ndarray, biome: str, seed: int, patches: np.ndarray) -> None:
+    """Directional relief is clearest in open ground and dies out over exposed subsoil."""
+    H, W = soil.shape
+    angle, along, across, strength = {
+        "temperate": (-63, 0.30, 0.042, 0.06),  # grass stems and tussocks
+        "tropical": (-48, 0.36, 0.06, 0.06),
+        "desert": (24, 2.3, 0.17, 0.042),       # wind ripples in loose sand
+        "arctic": (-27, 2.8, 0.23, 0.027),      # low snowdrifts
+        "volcanic": (28, 1.2, 0.15, 0.052),     # wind-scoured patches of ash
+    }[biome]
+    drift = swell_field(Noise(seed + 607), H, W, angle, along * PX, across * PX)
+    drift = np.clip(drift, -1.8, 1.8) * (1 - soil) * (0.3 + 0.7 * sstep(-0.6, 1.0, patches))
+    for c, tint in enumerate((1.03, 1.0, 0.74) if biome in ("temperate", "tropical") else (1.0, 1.0, 1.0)):
+        img[..., c] *= 1 + strength * tint * drift
 
 
 def sample_bilinear(t: np.ndarray, u: np.ndarray, v: np.ndarray) -> np.ndarray:
@@ -551,6 +592,7 @@ def render(mid: str, debug: bool = False) -> dict:
     if "ground_sat" in cfg:
         L = lum(img)[..., None]
         img = L + (img - L) * cfg["ground_sat"]
+        del L
     g2 = tex_layer(tex("ground2"), H, W, rng, noise, variants=2)
     if "ground2_tint" in cfg:
         g2 *= np.asarray(cfg["ground2_tint"], np.float32)
@@ -571,15 +613,18 @@ def render(mid: str, debug: bool = False) -> dict:
         g2max = g2max + (1.0 - g2max) * band
         del band
     m2 = sstep(-1.2, 1.2, x) * g2max
-    del La, Lb, da, db, x
-    img = img * (1 - m2[..., None]) + g2 * m2[..., None]
+    del La, Lb, da, db, x, f, g2max
+    blend_into(img, g2, m2)
     del g2
     lb, lw = cfg["lowfreq"]
     nb = upsample(noise.fbm(H // 8, W // 8, 10 * PX / 8, octaves=3), H, W)
     nw = upsample(noise.fbm(H // 8, W // 8, 14 * PX / 8, octaves=2), H, W)
     img = ndi.gaussian_filter(img, (SOFTEN, SOFTEN, 0))
-    img *= (1.0 + lb * nb)[..., None]
-    img *= np.stack([1 + lw * nw, np.ones_like(nw), 1 - lw * nw], -1)
+    img *= (1.0 + lb * np.clip(nb, -2.4, 2.4))[..., None]
+    img[..., 0] *= 1 + lw * nw
+    img[..., 2] *= 1 - lw * nw
+    ground_relief(img, m2, biome, seed, n_big)
+    del m2, nb, nw
 
     Hterr = np.zeros((H, W), np.float32)   # height field for cast shadows
     ao = np.zeros((H, W), np.float32)      # ambient-occlusion darkening 0..1
@@ -604,8 +649,9 @@ def render(mid: str, debug: bool = False) -> dict:
             st = L + (st - L) * 0.75  # desaturate
             if code == CRYSTAL:
                 st = st * np.asarray(cfg["crystal_tint"], np.float32)
-            img = img * (1 - m[..., None]) + st * m[..., None]
-        del rl, det
+            blend_into(img, st, m)
+            del e, m, st, dark, L
+        del rl, det, blot
 
     # ---- 3. rough ground (also underlays water banks so no grass gaps show)
     if has[ROUGH]:
@@ -619,8 +665,8 @@ def render(mid: str, debug: bool = False) -> dict:
             m = hmask(e_rough, 0.1 * PX, detail(rl) - detail(img))
         # the underlay beneath water only near real rough tiles (no mud rim on grassy shores)
         m *= sstep(-1.1 * PX, -0.55 * PX, tile_sdf(T == ROUGH, blur=0.3))
-        img = img * (1 - m[..., None]) + rl * m[..., None]
-        del rl
+        blend_into(img, rl, m)
+        del rl, m, e_rough
 
     # ---- 3b. scattered stones embedded in open ground (flat, purely decorative)
     peb = cfg.get("pebbles", 0.0)
@@ -637,8 +683,8 @@ def render(mid: str, debug: bool = False) -> dict:
             rkl = tex("rock")
             st_rgb = tiled(rkl, H, W, 3, 37, 91) * 1.12 + 0.03
             st_rgb = st_rgb * (0.35 + 0.65 * sh)[..., None]
-            ms = np.clip(stone * 1.4, 0, 1)[..., None]
-            img = img * (1 - ms) + st_rgb * ms
+            ms = np.clip(stone * 1.4, 0, 1)
+            blend_into(img, st_rgb, ms)
             Hterr = np.maximum(Hterr, hs)
             del hs, sh, st_rgb, ms
         del clus, nz, stone, allow
@@ -651,12 +697,15 @@ def render(mid: str, debug: bool = False) -> dict:
             e_road = rs + cfg["road_wobble"] * (0.07 * PX * n_edge + 0.035 * PX * n_fine)
         else:
             e_road = rs + 0.07 * PX * n_edge + 0.035 * PX * n_fine
-        m_road = sstep(-1.2, 1.2, e_road)
-        verge = sstep(-0.32 * PX, -0.02 * PX, e_road) * (1 - m_road)
-        # shoulders: gravelly and darker
-        vr = sstep(-0.2 * PX, 0.0, e_road + 0.06 * PX * n_fine) * (1 - m_road)
-        img = img * (1 - 0.22 * verge[..., None])
-        img = img * (1 - 0.35 * vr[..., None]) + rough_t.mean((0, 1)) * 0.8 * 0.35 * vr[..., None]
+        m_road = sstep(-1.35, 1.35, e_road)
+        # A broad, mottled gravel verge with a narrow contact shadow under the road lip.
+        verge = sstep(-0.32 * PX, -0.04 * PX, e_road + 0.035 * PX * n_fine) * (1 - m_road)
+        contact = sstep(-0.11 * PX, -0.015 * PX, e_road) * (1 - m_road)
+        gravel = rough_t.mean((0, 1)) * 1.08
+        verge *= 0.30 + 0.26 * sstep(-0.55, 1.1, n_fine)
+        blend_into(img, gravel, verge)
+        img *= (1 - 0.23 * contact)[..., None]
+        del rs, verge, contact
         # oriented texture: blend 4 orientations by local road direction
         lowm = ndi.gaussian_filter(np.isin(T, [ROAD, BRIDGE]).astype(np.float32), 0.9)
         gy, gx = np.gradient(lowm)
@@ -667,6 +716,7 @@ def render(mid: str, debug: bool = False) -> dict:
         theta = upsample(np.cos(2 * theta), H, W), upsample(np.sin(2 * theta), H, W)
         ys, xs = np.nonzero(m_road > 0.002)
         c2, s2 = theta[0][ys, xs], theta[1][ys, xs]
+        del theta
         ang = 0.5 * np.arctan2(s2, c2)
         native = streak_angle(road_t)
         acc = np.zeros((len(ys), 3), np.float32)
@@ -687,26 +737,27 @@ def render(mid: str, debug: bool = False) -> dict:
         rm = road_t.mean((0, 1))
         road_rgb = (rm + (road_rgb - rm) * cfg.get("road_contrast", 1.0)) * np.asarray(
             cfg.get("road_mul", (1.0, 1.0, 1.0)), np.float32)
-        # slight worn darkening toward the edges + low-frequency variation
-        edge = sstep(0.28 * PX, 0.0, e_road[ys, xs])
-        curb = sstep(0.07 * PX, 0.02 * PX, e_road[ys, xs]) * cfg.get("road_curb", 0.0)
-        road_rgb *= (1 - 0.18 * edge - curb)[:, None] * (1 + 0.06 * n_big[ys, xs])[:, None]
+        # The compacted lane and speckled aggregate at the edge read separately at zoom.
+        side = e_road[ys, xs] / PX
+        edge = sstep(0.24, 0.02, side)
+        lip = sstep(0.015, 0.052, side) * sstep(0.16, 0.075, side)
+        grit = sstep(-0.3, 1.25, n_fine[ys, xs])
+        curb = sstep(0.07, 0.01, side) * cfg["road_curb"]
+        road_rgb *= (1 - 0.12 * edge - curb + lip * (0.04 + 0.17 * grit))[:, None]
+        road_rgb *= (1 + 0.085 * n_big[ys, xs])[:, None]
         mm = m_road[ys, xs][:, None]
         img[ys, xs] = img[ys, xs] * (1 - mm) + road_rgb * mm
-        del theta, acc, ys, xs
-    else:
-        m_road = np.zeros((H, W), np.float32)
+        del e_road, m_road, acc, ys, xs, road_rgb, wsum, wk, sel, mm
 
     # ---- 5. water / lava and shallows
     m_water = np.zeros((H, W), np.float32)
     m_lava = np.zeros((H, W), np.float32)
-    sd_deep = None
+    e_deep = None
     if any_wet:
         wc = cfg["water"]
         e_wet = sd_wet + 0.13 * PX * n_edge + 0.035 * PX * n_fine
         m_water = sstep(-1.5, 1.5, e_wet)
-        sd_deep = sdf([WATER, BRIDGE, DEEP], blur=0.42)
-        e_deep = sd_deep + 0.1 * PX * n_edge + 0.03 * PX * n_fine
+        e_deep = sdf([WATER, BRIDGE, DEEP], blur=0.42) + 0.1 * PX * n_edge + 0.03 * PX * n_fine
         m_deep = sstep(-1.5, 1.5, e_deep) * m_water
         liq = ndi.gaussian_filter(tex_layer(tex("liquid"), H, W, rng, noise, feat=3.5 * PX), (0.5, 0.5, 0))
         bed = tex_layer(tex(wc["bed"]), H, W, rng, noise, variants=2) * np.asarray(wc["bed_mul"], np.float32)
@@ -722,14 +773,18 @@ def render(mid: str, debug: bool = False) -> dict:
                 # a distinct drop-off where deep water meets fordable shallows
                 near_sh = sstep(-1.4 * PX, -0.4 * PX, tile_sdf(T == SHALLOWS, blur=0.42))
                 depth = np.maximum(depth, (0.5 + 0.5 * depth) * near_sh)
-            dd = depth[..., None]
             nm = np.asarray(wc["near_mul"], np.float32)
             dm = np.asarray(wc["deep_mul"], np.float32)
             na = np.asarray(wc["near_add"], np.float32)
             da = np.asarray(wc["deep_add"], np.float32)
-            deep_col = liq * (nm + (dm - nm) * dd) + (na + (da - na) * dd)
-            clar = wc["clarity"] * (1 - dd) ** 1.5
-            deep_col = deep_col * (1 - clar) + bed * 0.8 * clar
+            clar = wc["clarity"] * (1 - depth) ** 1.5
+            deep_col = np.empty_like(liq)
+            for c in range(3):
+                water = liq[..., c] * (nm[c] + (dm[c] - nm[c]) * depth) + na[c] + (da[c] - na[c]) * depth
+                deep_col[..., c] = water * (1 - clar) + bed[..., c] * (0.8 * clar)
+            del clar, depth, wet, water
+            if has[SHALLOWS]:
+                del near_sh
             # drop-off edge: darker line just inside deep water
             drop = sstep(0.0, 0.1 * PX, e_deep) * sstep(0.35 * PX, 0.05 * PX, e_deep)
             deep_col *= (1 - wc.get("drop", 0.22) * drop)[..., None]
@@ -747,23 +802,23 @@ def render(mid: str, debug: bool = False) -> dict:
                     cm *= sstep(-1.6 * PX, -0.7 * PX, e_abyss) * sstep(0.0, -0.15 * PX, e_abyss)
                     cm *= sstep(0.25 * PX, 0.7 * PX, e_deep)  # not in the swash at the beach
                     hue = noise.fbm(H // 4, W // 4, 1.2 * PX / 4, octaves=2)
-                    hue = upsample(hue, H, W)[..., None]
+                    hue = upsample(hue, H, W)
                     pink = np.array([1.75, 0.82, 0.86], np.float32)
                     ochre = np.array([1.7, 1.02, 0.62], np.float32)
                     olive = np.array([1.15, 0.98, 0.62], np.float32)
-                    tint = np.where(hue > 0.35, pink, np.where(hue < -0.35, olive, ochre))
-                    tint = ndi.gaussian_filter(tint, (2.0, 2.0, 0))
-                    a = (wc["coral"] * cm)[..., None]
-                    deep_col = deep_col * (1 - a) + deep_col * tint * a
+                    a = wc["coral"] * cm
+                    for c in range(3):
+                        tint = np.where(hue > 0.35, pink[c], np.where(hue < -0.35, olive[c], ochre[c]))
+                        tint = ndi.gaussian_filter(tint, 2.0)
+                        deep_col[..., c] *= 1 + (tint - 1) * a
                     del cm, hue, tint, a
                 r1, mix1 = wc.get("abyss_reach", 3.5), wc.get("abyss_mix", 0.7)
                 ab = sstep(-0.2 * PX, r1 * PX, e_abyss) ** 0.8 * mix1
                 if "abyss_far" in wc:  # and on into the abyss colour far from any shore
                     mix2, r2 = wc["abyss_far"]
                     ab = ab + mix2 * sstep(0.5 * r1 * PX, r2 * PX, e_abyss)
-                ab = ab[..., None]
                 abyss = np.asarray(wc.get("abyss", (0.02, 0.08, 0.16)), np.float32)
-                deep_col = deep_col * (1 - ab) + abyss * ab
+                blend_into(deep_col, abyss, ab)
                 ledge = sstep(-0.1 * PX, 0.05 * PX, e_abyss) * sstep(0.4 * PX, 0.1 * PX, e_abyss)
                 deep_col *= (1 - 0.18 * ledge)[..., None]
                 sea = sstep(0.1 * PX, 1.5 * PX, e_abyss)
@@ -788,10 +843,10 @@ def render(mid: str, debug: bool = False) -> dict:
                     line2 *= np.clip(noise.fbm(H, W, 0.45 * PX, octaves=2) - 0.15, 0, 1) * 0.55
                     spray = sstep(-0.55 * PX, -0.05 * PX, es) * sstep(0.1 * PX, -0.05 * PX, es)
                     spray *= sstep(0.9, 1.9, noise.fbm(H, W, 0.1 * PX, octaves=2)) * 0.6
-                    fo = (wc["surf"] * np.clip(line1 + line2 + spray, 0, 1))[..., None]
-                    deep_col = deep_col * (1 - fo) + np.asarray(wc["foam"], np.float32) * fo
+                    fo = wc["surf"] * np.clip(line1 + line2 + spray, 0, 1)
+                    blend_into(deep_col, np.asarray(wc["foam"], np.float32), fo)
                     del churn, es, line1, line2, spray, fo
-                del ab, sea
+                del ab, sea, ledge, e_abyss
             # shallows: bed seen through a thin water film + ripples
             L = lum(liq)
             rip = (L - ndi.gaussian_filter(L, 4))[..., None]
@@ -811,42 +866,46 @@ def render(mid: str, debug: bool = False) -> dict:
             # lighter sand-bar rim along the deep edge
             rim = sstep(-0.3 * PX, -0.02 * PX, e_deep) * (1 - m_deep)
             sh_col = sh_col * (1 + 0.16 * rim[..., None])
-            wcol = sh_col * (1 - m_deep[..., None]) + deep_col * m_deep[..., None]
+            blend_into(sh_col, deep_col, m_deep)
+            del deep_col
             # foam / highlight line at the shore (inside the water edge)
             foam = sstep(0.0, 0.03 * PX, e_wet) * sstep(0.13 * PX, 0.03 * PX, e_wet)
             foam *= np.clip(0.55 + 0.6 * noise.fbm(H, W, 0.3 * PX, octaves=2), 0, 1)
             foam2 = sstep(0.1 * PX, 0.16 * PX, e_wet) * sstep(0.26 * PX, 0.18 * PX, e_wet)
             foam2 *= np.clip(noise.fbm(H, W, 0.25 * PX, octaves=2) - 0.2, 0, 1) * 0.6
-            fo = np.clip(foam * 0.55 + foam2 * 0.3, 0, 1)[..., None]
-            wcol = wcol * (1 - fo) + np.asarray(wc["foam"], np.float32) * fo
-            img = img * (1 - m_water[..., None]) + wcol * m_water[..., None]
-            del deep_col, sh_col, wcol, rip
+            fo = np.clip(foam * 0.55 + foam2 * 0.3, 0, 1)
+            blend_into(sh_col, np.asarray(wc["foam"], np.float32), fo)
+            blend_into(img, sh_col, m_water)
+            del sh_col, rip, L, rim, foam, foam2, fo, m_deep, e_deep
+            e_deep = None
         else:
             # LAVA: molten texture, cooled crust at the edges, emissive boost
             m_lava = m_deep
             lava = liq.copy()
             Ll = lum(lava)
             hot = sstep(0.3, 0.9, Ll)[..., None]
-            lava = lava * (1.1 + 0.35 * hot) + np.array([0.05, 0.015, 0.0], np.float32) * hot
+            lava *= 1.1 + 0.35 * hot
+            lava += np.array([0.05, 0.015, 0.0], np.float32) * hot
             inner = sstep(0.2 * PX, 1.2 * PX, e_deep)[..., None]
-            lava = lava * (0.92 + 0.18 * inner)
+            lava *= 0.92 + 0.18 * inner
             crust_n = noise.fbm(H, W, 0.3 * PX, octaves=3)
             crust = sstep(0.42 * PX, 0.04 * PX, e_deep + 0.1 * PX * crust_n)
             crust_col = bed * np.array([0.42, 0.38, 0.36], np.float32)
             # faint glowing cracks in the crust
             cracks = sstep(0.45, 0.8, Ll)[..., None] * np.array([0.7, 0.22, 0.04], np.float32)
-            crust_col = crust_col + cracks * 0.55
-            cr = (crust * 0.92)[..., None]
-            lava = lava * (1 - cr) + crust_col * cr
+            crust_col += cracks * 0.55
+            blend_into(lava, crust_col, crust * 0.92)
+            del Ll, hot, inner, crust_n, crust, crust_col
             # shallows on a volcanic map = thick crusted flow, fordable
             sh_col = bed * 0.55 + cracks * 0.8
-            wcol = sh_col * (1 - m_deep[..., None]) + lava * m_deep[..., None]
+            blend_into(sh_col, lava, m_deep)
+            del lava, cracks
             # scorched dark rim on land
             scorch = sstep(-0.3 * PX, 0.0, e_wet) * (1 - m_water)
             img *= (1 - 0.45 * scorch)[..., None]
-            img = img * (1 - m_water[..., None]) + wcol * m_water[..., None]
-            del lava, crust_col, sh_col, wcol
-        del liq, bed
+            blend_into(img, sh_col, m_water)
+            del sh_col, scorch
+        del liq, bed, e_wet
 
     # ---- 6. forest canopy
     e_for = None
@@ -868,11 +927,9 @@ def render(mid: str, debug: bool = False) -> dict:
             em = sstep(2.3, 3.2, noise.fbm(H, W, 0.1 * PX, octaves=2)) * sstep(0.2 * PX, 0.6 * PX, e_for)
             em = ndi.gaussian_filter(em, 1.2) * 1.6
             can = can + np.array([1.0, 0.38, 0.06], np.float32) * np.clip(em, 0, 1)[..., None]
-        img = img * (1 - m_for[..., None]) + can * m_for[..., None]
+        blend_into(img, can, m_for)
         Hterr = np.maximum(Hterr, Hc * m_for)
-        del can, Lc, shade
-    else:
-        m_for = np.zeros((H, W), np.float32)
+        del can, Lc, Hc, shade, m_for
 
     # ---- 7. rock / cliffs
     e_rock = None
@@ -906,11 +963,9 @@ def render(mid: str, debug: bool = False) -> dict:
             rk = rk * (1 - cfg["rock_notch"] * notch)[..., None]
             del notch
         ao = np.maximum(ao, np.exp(np.minimum(e_rock, 0) / (0.2 * PX)) * (1 - m_rock) * 0.42)
-        img = img * (1 - m_rock[..., None]) + rk * m_rock[..., None]
+        blend_into(img, rk, m_rock)
         Hterr = np.maximum(Hterr, Hr * m_rock)
-        del rk, Lr, shade
-    else:
-        m_rock = np.zeros((H, W), np.float32)
+        del rk, Lr, shade, inside, flank, ridged, top, Hr, rim, face, m_rock
 
     # ---- apply AO (ground-level darkening around rocks and woods)
     img *= (1 - ao)[..., None]
@@ -930,10 +985,10 @@ def render(mid: str, debug: bool = False) -> dict:
     k = cfg["shadow_k"] * (1 - 0.6 * m_lava) * (1 + 0.25 * (m_water - m_lava))
     sc = np.asarray(cfg["shadow_col"], np.float32)
     img *= 1 - (k * shadow)[..., None] * (1 - sc)
-    del shadow
+    del shadow, k, Hterr, ao, n_edge, n_fine, e_for, e_rock, sd_wet
 
     # ---- 11. lava glow (emissive, unaffected by sun shadows)
-    if volcanic and sd_deep is not None and has[WATER]:
+    if volcanic and e_deep is not None and has[WATER]:
         dist = np.minimum(e_deep, 0)
         g = (np.exp(dist / (0.35 * PX)) * 0.7 + np.exp(dist / (0.9 * PX)) * 0.3) * (1 - m_lava)
         g *= (0.85 + 0.15 * n_big) * (1 - 0.8 * m_deck)
@@ -942,8 +997,14 @@ def render(mid: str, debug: bool = False) -> dict:
         img = img * (1 + 1.6 * gc * g[..., None]) + 0.07 * gc * g[..., None]
 
     # ---- 12. grading
-    img = grade(img, cfg["grade"])
-    out = Image.fromarray((np.clip(img, 0, 1) * 255 + 0.5).astype(np.uint8), "RGB")
+    del n_big, m_water, m_lava, m_deck
+    rgb = np.empty((H, W, 3), np.uint8)
+    for y in range(0, H, 128):
+        strip = np.clip(grade(img[y:y + 128], cfg["grade"]), 0, 1)
+        rgb[y:y + 128] = (strip * 255 + 0.5).astype(np.uint8)
+    del img
+    out = Image.fromarray(rgb)
+    del rgb
     out = out.filter(ImageFilter.UnsharpMask(radius=1.2, percent=35, threshold=5))
 
     stats = write_outputs(mid, out, T, debug)
@@ -1036,21 +1097,35 @@ def draw_bridge(img, Hterr, m_deck, b, road_t, cfg, rng):
     style = cfg.get("deck", "road")
     n = road_t.shape[0]
     if style == "planks":
-        pw = 0.17 * PX
+        pw = 0.19 * PX
         k = np.floor((u - t0) / pw)
         r = _hash01(k, 7)
-        grain = np.sin(v * 0.9 + r * 40.0) * 0.5 + np.sin(v * 2.3 + r * 17.0) * 0.3
+        ph = np.mod(u - t0, pw)
+        # Grain runs along each board. Bow the growth rings around irregular knots.
+        knot_v = (2 * _hash01(k, 73) - 1) * hw * 0.84
+        grain_v = (v - knot_v) / (0.17 * PX)
+        grain_u = (ph / pw - 0.52) * 2.4
+        knot = np.exp(-(grain_v * grain_v + grain_u * grain_u)) * sstep(0.4, 0.8, _hash01(k, 31))
+        rings = ph * 1.45 + 0.42 * np.sin(v * 0.11 + r * 17) + 0.34 * np.sin(v * 0.29 + r * 29)
+        grain = np.sin(rings + knot * 6.0) + 0.36 * np.sin(rings * 1.9 + r * 11)
         wood = np.asarray(cfg.get("wood", (0.52, 0.4, 0.29)), np.float32)
-        deck = wood * (0.78 + 0.32 * r + 0.06 * grain)[..., None]
+        tone = 0.78 + 0.32 * r + 0.058 * grain - 0.18 * knot
+        # Water-worn edges expose endgrain; two rows of iron pins fasten down the boards.
+        pin = sstep(1.65, 0.45, np.hypot(ph - 0.5 * pw, av - (hw - beam_w - 0.10 * PX)))
+        deck = wood * (tone * (1 - 0.58 * pin))[..., None]
+        deck += (0.09 * sstep(1.3, 0.15, np.hypot(ph - 0.5 * pw + 0.5,
+                                                       av - (hw - beam_w - 0.10 * PX) + 0.45)))[..., None]
         # worn wheel lanes, plank gaps
         deck *= (1 - 0.08 * np.exp(-((av - wd * 0.2) / (0.1 * PX)) ** 2))[..., None]
-        ph = np.mod(u - t0, pw)
-        gap = sstep(1.3, 0.3, np.minimum(ph, pw - ph))
-        deck *= (1 - 0.55 * gap)[..., None]
+        gap = sstep(1.55, 0.35, np.minimum(ph, pw - ph))
+        bevel = sstep(0.8, 1.8, ph) * sstep(3.1, 2.1, ph)
+        deck *= (1 - 0.62 * gap + 0.16 * bevel)[..., None]
         tex = sample_bilinear(road_t, v + rng.integers(n), u + rng.integers(n))
-        deck = deck * (0.85 + 0.3 * (lum(tex) - lum(tex).mean()))[..., None]
+        wear = lum(tex)
+        wear -= wear.mean()
+        deck *= (0.93 + 0.34 * wear)[..., None]
         if cfg.get("deck_snow", 0) > 0:
-            sn = np.clip(0.5 + 0.8 * (lum(tex) - lum(tex).mean()) * 4 + 0.3 * sstep(hw * 0.6, hw, av), 0, 1)
+            sn = np.clip(0.5 + 3.2 * wear + 0.3 * sstep(hw * 0.6, hw, av), 0, 1)
             sn *= cfg["deck_snow"]
             deck = deck * (1 - sn[..., None]) + np.array([0.9, 0.93, 0.97], np.float32) * sn[..., None]
     else:
@@ -1266,8 +1341,6 @@ def write_outputs(mid: str, im: Image.Image, T: np.ndarray, debug: bool) -> dict
     out = OUT_DIR / mid
     budget = map_budget(T)
     out.mkdir(parents=True, exist_ok=True)
-    for old in out.glob("t_*.webp"):
-        old.unlink()
     W, H = im.size
     cols = int(math.ceil(W / CHUNK))
     rows = int(math.ceil(H / CHUNK))
@@ -1285,8 +1358,12 @@ def write_outputs(mid: str, im: Image.Image, T: np.ndarray, debug: bool) -> dict
         total = sum(len(v) for v in blobs.values())
         if total <= budget:
             break
-    for (c, r), data in blobs.items():
-        (out / f"t_{c}_{r}.webp").write_bytes(data)
+    paths = {out / f"t_{c}_{r}.webp": data for (c, r), data in blobs.items()}
+    for path, data in paths.items():
+        path.write_bytes(data)
+    for old in out.glob("t_*.webp"):
+        if old not in paths:
+            old.unlink()
     meta = dict(pxPerTile=PX, chunk=CHUNK, cols=cols, rows=rows, width=W, height=H)
     (out / "meta.json").write_text(json.dumps(meta) + "\n")
     th = im.resize((THUMB, THUMB), Image.LANCZOS)

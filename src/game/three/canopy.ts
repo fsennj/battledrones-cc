@@ -7,13 +7,10 @@ export interface TreeSpot {
   s: number;
 }
 
-/** A tree's canopy middle, over its spot (tree heights scale with s). */
-const CANOPY_H = 0.55;
-/** …and a robot's middle (tiles): squads are robots half a tree tall. */
+/** A robot's middle above ground, in tiles. */
 const ROBOT_H = 0.2;
 /** Thinned all the way inside this (plus the canopy's reach), not at all past FADE_R further out. */
 const CLEAR_R = 0.5;
-const CANOPY_R = 0.32;
 const FADE_R = 0.4;
 /** Easing time constants (ms): the canopy clears quickly, grows back unhurried. */
 const CLEAR_MS = 90;
@@ -30,7 +27,11 @@ const GROW_MS = 260;
 export class Canopy {
   private readonly x: Float32Array;
   private readonly z: Float32Array;
-  private readonly s: Float32Array;
+  private readonly crownY: Float32Array;
+  private readonly crownR: Float32Array;
+  private maxY = ROBOT_H;
+  private minY = ROBOT_H;
+  private maxR = 0;
   /** The instanced mesh and slot of each tree; its thinning now and wanted this frame (0–1). */
   private readonly mesh: Uint8Array;
   private readonly slot: Uint32Array;
@@ -53,7 +54,8 @@ export class Canopy {
     const n = meshes.reduce((k, m) => k + m.spots.length, 0);
     this.x = new Float32Array(n);
     this.z = new Float32Array(n);
-    this.s = new Float32Array(n);
+    this.crownY = new Float32Array(n);
+    this.crownR = new Float32Array(n);
     this.mesh = new Uint8Array(n);
     this.slot = new Uint32Array(n);
     this.fade = new Float32Array(n);
@@ -68,10 +70,28 @@ export class Canopy {
       mesh.geometry.setAttribute("canopy", attr);
       this.attrs.push(attr);
       this.dirty.push(false);
+      // The palm fronds, pine skirts and scrub crowns cover different areas on screen.
+      // Measure the widest part above the stump once per variant.
+      const p = mesh.geometry.getAttribute("position");
+      let radius = 0;
+      let height = ROBOT_H;
+      for (let j = 0; j < p.count; j++) {
+        const y = p.getY(j);
+        if (y < 0.2) continue;
+        const r = Math.hypot(p.getX(j), p.getZ(j));
+        if (r > radius) {
+          radius = r;
+          height = y;
+        }
+      }
       spots.forEach((p, k) => {
         this.x[i] = p.x;
         this.z[i] = p.y;
-        this.s[i] = p.s;
+        this.crownY[i] = height * p.s;
+        this.crownR[i] = radius * p.s;
+        this.maxY = Math.max(this.maxY, this.crownY[i]!);
+        this.minY = Math.min(this.minY, this.crownY[i]!);
+        this.maxR = Math.max(this.maxR, this.crownR[i]!);
         this.mesh[i] = m;
         this.slot[i] = k;
         const t = Math.min(H - 1, Math.max(0, Math.floor(p.y))) * W + Math.min(W - 1, Math.max(0, Math.floor(p.x)));
@@ -95,24 +115,24 @@ export class Canopy {
     const want = this.want;
     for (const i of this.active) want[i] = 0;
     // a canopy covers the ground (and the robots) north of it, the higher the further: look south
-    const shift = (CANOPY_H * 1.3 - ROBOT_H) * cot;
-    const reach = CLEAR_R + CANOPY_R * 1.3 + FADE_R;
+    const shiftMin = (this.minY - ROBOT_H) * cot;
+    const shiftMax = (this.maxY - ROBOT_H) * cot;
+    const reach = CLEAR_R + this.maxR + FADE_R;
     for (let p = 0; p < n; p++) {
       const sx = points[p * 2]!;
       const sz = points[p * 2 + 1]!;
       const x0 = Math.max(0, Math.floor(sx - reach));
       const x1 = Math.min(this.W - 1, Math.floor(sx + reach));
-      const y0 = Math.max(0, Math.floor(sz - reach));
-      const y1 = Math.min(this.H - 1, Math.floor(sz + reach + shift));
+      const y0 = Math.max(0, Math.floor(sz - reach + Math.min(shiftMin, shiftMax)));
+      const y1 = Math.min(this.H - 1, Math.floor(sz + reach + Math.max(shiftMin, shiftMax)));
       for (let ty = y0; ty <= y1; ty++)
         for (let tx = x0; tx <= x1; tx++) {
           const t = ty * this.W + tx;
           for (let k = this.start[t]!; k < this.start[t + 1]!; k++) {
             const i = this.at[k]!;
-            const s = this.s[i]!;
             const dx = this.x[i]! - sx;
-            const dz = this.z[i]! - sz - (CANOPY_H * s - ROBOT_H) * cot;
-            const r0 = CLEAR_R + CANOPY_R * s;
+            const dz = this.z[i]! - sz - (this.crownY[i]! - ROBOT_H) * cot;
+            const r0 = CLEAR_R + this.crownR[i]!;
             const w = 1 - (Math.hypot(dx, dz) - r0) / FADE_R;
             if (w <= want[i]!) continue;
             want[i] = Math.min(1, w);

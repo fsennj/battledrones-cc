@@ -1,95 +1,107 @@
-"""HQ (headquarters, 3x3 tiles). See lib.py for how to run.
-
-Mirrors the procedural hq in src/game/three/models.ts: a tapered base plinth, a tapered keep,
-four corner towers, a central dome with a command cab and beacon on the crown, a comms dish on
-the north-east roof, team bands, perimeter walls and the main gate with its hazard-edged ramp.
-Authored at map scale (1 unit = 1 tile), ground at y = 0, centred on the footprint: the game
-draws the GLB unscaled, exactly like the procedural model it replaces.
-"""
+"""Raise the headquarters around a domed command centre and four security towers."""
 import sys, os, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib import _finish
+from building_detail import CONCRETE, RECESS, STEEL, beam, export_building, grille, threshold
 
 
-def cap(r, phi, at, hex_, rot=(0, 0, 0), grade=0.25, w=16, h=8):
-    """Spherical cap of polar angle `phi` (builder.ts sphere phiLength), pole up before `rot`."""
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=r, segments=w, ring_count=h)
-    o = bpy.context.object
-    zc = r * math.cos(phi)
-    bm = bmesh.new()
-    bm.from_mesh(o.data)
-    for v in [v for v in bm.verts if v.co.z < zc - 1e-5]:
-        bm.verts.remove(v)
-    bm.to_mesh(o.data)
-    bm.free()
-    return _finish(o, hex_, at, rot, 0, grade=grade)
+def dome(radius, base):
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, segments=24, ring_count=12)
+    obj = bpy.context.object
+    mesh = bmesh.new()
+    mesh.from_mesh(obj.data)
+    for vertex in [v for v in mesh.verts if v.co.z < -1e-5]:
+        mesh.verts.remove(vertex)
+    mesh.to_mesh(obj.data)
+    mesh.free()
+    return _finish(obj, STEEL, (0, base, 0), (0, 0, 0), 0, grade=0.35)
 
 
-H = []
-# plinth and keep
-H.append(box((2.9, 0.16, 2.9), (0, 0.06, 0), GM_D, 0.04, taper=0.03))
-H.append(box((2.76, 0.05, 2.76), (0, 0.155, 0), GM, 0.012))                      # cap slab on the plinth
-H.append(box((2.3, 0.44, 2.3), (0, 0.36, 0), GM, 0.07, taper=0.08))
-for s in (1, -1):                                                                # corner buttresses
-    H.append(box((0.26, 0.6, 0.26), (s * 0.99, 0.41, 0.99), GM_L, 0.03))
-    H.append(box((0.26, 0.6, 0.26), (s * 0.99, 0.41, -0.99), GM_L, 0.03))
-# window rows along the keep's four faces
-for z in (-1.155, 1.155):
-    for x in (-0.75, 0, 0.75):
-        H.append(box((0.16, 0.11, 0.02), (x, 0.4, z), AMBER, bevel=0, grade=0))
-for x in (-1.155, 1.155):
-    for z in (-0.75, 0, 0.75):
-        H.append(box((0.02, 0.11, 0.16), (x, 0.4, z), AMBER, bevel=0, grade=0))
-# team bands out from the dome, one to each side
-for x, z, ry in ((0, -0.86, 0), (0, 0.86, 0), (0.86, 0, math.pi / 2), (-0.86, 0, math.pi / 2)):
-    H.append(box((0.36, 0.03, 0.3), (x, 0.592, z), T_MAIN, 0.015, rot=(0, ry, 0)))
-# the four corner towers
-for x in (-1.05, 1.05):
-    for z in (-1.05, 1.05):
-        H.append(box((0.78, 0.06, 0.78), (x, 0.09, z), GM_D, 0.02))               # tower footing
-        H.append(box((0.24, 0.2, 0.24), (x, 0.2, z), GM_D, 0.015))               # entry stub under the drum
-        H.append(drum(0.31, 0.26, 0.74, 8, (x, 0.37, z), GM, 0.03))
-        H.append(cyl(0.33, 0.33, 0.025, 8, (x, 0.28, z), GM_L))                   # corbel ring
-        H.append(drum(0.28, 0.24, 0.1, 8, (x, 0.79, z), T_MAIN, 0.03))
-        H.append(drum(0.17, 0.13, 0.06, 8, (x, 0.87, z), GM_L, 0.015))
-        H.append(light((x, 0.92, z), 0.06))
-# the dome and its collar rings
-H.append(cap(0.74, math.pi / 2, (0, 0.56, 0), GM_L))
-H.append(torus(0.75, 0.06, (0, 0.6, 0), T_MAIN, seg=24))
-H.append(torus(0.55, 0.03, (0, 1.06, 0), GM_D, seg=20))
-# command cab on the crown: amber windows, a team roof, the mast and beacon
-H.append(drum(0.24, 0.22, 0.14, 8, (0, 1.3, 0), GM_D, 0.02))
-H.append(drum(0.245, 0.245, 0.04, 8, (0, 1.3, 0), AMBER, 0, grade=0))
-H.append(drum(0.22, 0.16, 0.06, 8, (0, 1.4, 0), T_MAIN, 0.02))
-H.append(cyl(0.022, 0.04, 0.5, 6, (0, 1.68, 0), GM_D))
-H.append(sphere(0.06, (0, 1.95, 0), AMBER))
-# comms dish on the north-east roof: a shallow tilted dish (cone body, dark recessed face, feed)
-H.append(cyl(0.03, 0.05, 0.16, 6, (0.66, 0.66, -0.66), GM_D))
-DISH_ROT = (-0.6, 0, -0.6)
-H.append(drum(0.07, 0.22, 0.09, 12, (0.66, 0.78, -0.66), GM_L, 0.015, rot=DISH_ROT))
-H.append(cyl(0.185, 0.185, 0.02, 12, (0.665, 0.83, -0.685), GM_D, rot=DISH_ROT))
-H.append(sphere(0.03, (0.72, 0.88, -0.73), AMBER, w=6, h=4))
-# perimeter walls with team copings, amber strips on three faces
-for x, z, ry in ((0, 1.16, 0), (0, -1.16, 0), (1.16, 0, math.pi / 2), (-1.16, 0, math.pi / 2)):
-    H.append(box((1.0, 0.17, 0.025), (x, 0.4, z), T_MAIN, 0, rot=(0, ry, 0)))
-for x, z, ry in ((0, -1.17, 0), (1.17, 0, math.pi / 2), (-1.17, 0, math.pi / 2)):
-    H.append(box((0.8, 0.035, 0.02), (x, 0.25, z), AMBER, 0, rot=(0, ry, 0)))
-# the main gate: dark door, lit lintel, hazard-edged ramp
-H.append(box((0.74, 0.28, 0.06), (0, 0.28, 1.17), GM_D, 0.015))
-H.append(box((0.62, 0.035, 0.02), (0, 0.44, 1.2), AMBER, bevel=0, grade=0))
-H.append(box((0.82, 0.04, 0.38), (0, 0.12, 1.36), GM_L, 0, rot=(0.22, 0, 0)))
-for x in (-0.43, 0.43):
-    H.append(box((0.06, 0.05, 0.38), (x, 0.125, 1.36), HAZ, 0, rot=(0.22, 0, 0)))
-H.append(box((0.3, 0.12, 0.2), (-0.75, 0.64, 0.55), GM_D, 0.02))                  # side blocks on the wall line
-H.append(box((0.24, 0.1, 0.3), (0.7, 0.63, 0.7), GM_D, 0.02))
-# corner lamps on the plinth, ducts and vents on the keep's back
-for x in (-1.38, 1.38):
-    for z in (-1.38, 1.38):
-        H.append(box((0.08, 0.05, 0.08), (x, 0.145, z), GM_D, 0.01))
-        H.append(light((x, 0.19, z), 0.05))
-H.append(tube(0.03, 0.3, 6, (-0.9, 0.5, 0.85), GM_D, rot=(0.45, 0, 0)))
-for x in (-0.6, -0.2, 0.2, 0.6):
-    H.append(box((0.02, 0.24, 0.02), (x, 0.36, -1.16), GM_D, bevel=0))
-hull = join(H, "hull", ao=(0.3, 0.38))
-export_and_preview(hull, None, "hq", ortho=3.4)
+H = [
+    octo(2.96, 2.96, 0.13, 0.02, (0, 0.065, 0), GM_D),
+    octo(2.86, 2.86, 0.045, 0, (0, 0.145, 0), CONCRETE),
+    box((2.29, 0.41, 2.29), (0, 0.367, 0), GM, 0.05, taper=0.05),
+    box((2.24, 0.08, 2.24), (0, 0.571, 0), RECESS, 0.018),
+    octo(2.16, 2.16, 0.046, 0.025, (0, 0.62, 0), GM_L),
+]
+
+# Broad team shoulders and raised walkways surround the dome.
+for side in (-1, 1):
+    H.append(box((0.26, 0.052, 1.34), (side * 0.91, 0.646, 0), T_MAIN, 0.009))
+    H.append(box((0.04, 0.034, 1.18), (side * 1.06, 0.681, 0), T_DARK, 0.004))
+    H.append(box((1.34, 0.052, 0.26), (0, 0.646, side * 0.91), T_MAIN, 0.009))
+    H.append(box((1.18, 0.034, 0.04), (0, 0.681, side * 1.06), T_DARK, 0.004))
+    for x in (-0.54, 0.54):
+        H.extend(grille(x, 0.665, side * 0.9, 0.21, 0.14, 3))
+
+# Armoured security towers with raised observation rooms and independent service hatches.
+for sx in (-1, 1):
+    for sz in (-1, 1):
+        x, z = sx * 1.05, sz * 1.05
+        H.extend([
+            octo(0.73, 0.73, 0.10, 0.08, (x, 0.198, z), GM_D),
+            drum(0.31, 0.24, 0.60, 8, (x, 0.492, z), GM, 0.016),
+            cyl(0.31, 0.31, 0.054, 8, (x, 0.37, z), STEEL),
+            drum(0.257, 0.29, 0.11, 8, (x, 0.742, z), RECESS, 0.012),
+            cyl(0.28, 0.28, 0.048, 8, (x, 0.803, z), AMBER, grade=0),
+            drum(0.32, 0.255, 0.095, 8, (x, 0.869, z), T_MAIN, 0.021),
+            cyl(0.126, 0.142, 0.04, 8, (x, 0.925, z), GM_D),
+            light((x, 0.954, z), 0.055),
+            box((0.14, 0.26, 0.033), (x, 0.24, z + sz * 0.289), T_DARK, 0.008),
+            box((0.03, 0.1, 0.21), (x + sx * 0.268, 0.52, z), GM_D, 0.006),
+        ])
+
+# Concentric trim follows the command dome, with radial ribs rising from the collar.
+base, radius = 0.654, 0.69
+H.append(dome(radius, base))
+H.append(cyl(0.72, 0.72, 0.063, 24, (0, base + 0.01, 0), T_DARK))
+H.append(torus(0.70, 0.025, (0, base + 0.047, 0), T_MAIN, seg=24, rot=(math.pi / 2, 0, 0)))
+H.append(torus(0.51, 0.019, (0, base + 0.47, 0), GM_D, seg=24, rot=(math.pi / 2, 0, 0)))
+for i in range(8):
+    a = math.tau * (i + 0.5) / 8
+    rib = [(math.cos(a) * 0.695 * math.cos(t), base + 0.695 * math.sin(t),
+            math.sin(a) * 0.695 * math.cos(t)) for t in (0.09, 0.34, 0.6, 0.86, 1.12, 1.3)]
+    for start, end in zip(rib, rib[1:]):
+        H.append(beam(start, end, 0.034, 0.029, GM_D))
+
+H.extend([
+    drum(0.29, 0.29, 0.086, 10, (0, 1.299, 0), GM_D, 0.012),
+    drum(0.275, 0.24, 0.057, 10, (0, 1.362, 0), AMBER, grade=0),
+    drum(0.29, 0.218, 0.074, 10, (0, 1.42, 0), T_MAIN, 0.009),
+    cyl(0.04, 0.073, 0.105, 8, (0, 1.482, 0), GM_D),
+    cyl(0.013, 0.028, 0.36, 6, (0, 1.703, 0), STEEL),
+    beam((-0.15, 1.695, 0), (0.15, 1.695, 0), 0.02, 0.022, GM_D),
+    beam((0, 1.776, -0.09), (0, 1.776, 0.09), 0.018, 0.018, GM_L),
+    sphere(0.048, (0, 1.914, 0), AMBER),
+])
+
+# Outside service shutters and the inset blast door and approach.
+for x in (-1.115, 1.115):
+    for z in (-0.67, -0.23, 0.23, 0.67):
+        H.append(box((0.06, 0.28, 0.33), (x, 0.35, z), RECESS, 0.01))
+        H.append(box((0.07, 0.041, 0.24), (x, 0.422, z), AMBER, bevel=0, grade=0))
+for x in (-0.65, 0.65):
+    H.append(box((0.17, 0.38, 0.17), (x, 0.36, 1.10), GM_L, 0.018))
+    H.append(box((0.078, 0.15, 0.025), (x, 0.405, 1.191), T_MAIN, 0.005))
+H.extend([
+    box((1.12, 0.37, 0.12), (0, 0.348, 1.125), RECESS, 0.02),
+    box((1.19, 0.11, 0.18), (0, 0.554, 1.132), T_MAIN, 0.017),
+    box((0.79, 0.026, 0.028), (0, 0.506, 1.229), AMBER, bevel=0, grade=0),
+    box((1.12, 0.027, 0.29), (0, 0.172, 1.31), GM_L, 0.008),
+])
+for i in range(5):
+    H.append(box((0.91, 0.034, 0.037), (0, 0.223 + i * 0.06, 1.193), GM, 0.004))
+H.extend(threshold(0, 0.187, 1.364, 1.10, 0.14, 6))
+
+# A tilted comms dish sits over the roof on its own pedestal.
+position = (0.75, 0.755, -0.64)
+tilt = (-0.55, 0, -0.48)
+H.append(cyl(0.039, 0.075, 0.16, 8, position, RECESS))
+H.append(drum(0.09, 0.204, 0.07, 12, (0.75, 0.858, -0.65), STEEL, 0.009, rot=tilt))
+H.append(cyl(0.171, 0.171, 0.016, 12, (0.768, 0.894, -0.672), RECESS, rot=tilt))
+H.append(beam((0.773, 0.897, -0.674), (0.817, 0.998, -0.723), 0.028, 0.025, GM_L))
+H.append(light((0.817, 0.998, -0.723), 0.047))
+
+join(H, "hull", ao=(0.24, 0.33))
+export_building("hq")

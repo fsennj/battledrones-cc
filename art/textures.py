@@ -15,16 +15,15 @@ Usage:  python3 art/textures.py      (art/terrain.py also refreshes those of the
 
 Needs Pillow and numpy only. Deterministic: same raws -> same output.
 
-Per biome: the raw is made seamless (blended with itself rolled half-way
-round, along a noisy seam), its low-frequency light is flattened out so the
-repeat doesn't show as a pattern of bright and dark patches, and it's
-resampled to SIZE from a 3 x 3 tiling (so the filter wraps and the result
-still tiles). WebP quality: the highest of WEBP_QUALITY that fits BUDGET
-(it warns if even the lowest doesn't).
+Per biome: the source is made seamless along a noisy seam, flattened to
+remove broad baked lighting, and colour-balanced. Fractures and strata
+keep more contrast than fine grain. The albedo is resampled to SIZE from a
+3 x 3 tiling so the filter wraps. WebP quality: the highest of WEBP_QUALITY
+that fits BUDGET (it warns if even the lowest doesn't).
 
-make_seamless and flatten are shared with art/terrain.py, which paints the
-maps with the same materials: it passes its own wrap-round blur (scipy's),
-this script an exact one via the FFT, so it needs no scipy.
+art/terrain.py uses the same rock albedos. It also shares the seamless and
+resampling helpers for other materials, and passes a SciPy filter for its
+larger blur fields. This script uses an FFT and needs no SciPy.
 """
 
 from __future__ import annotations
@@ -44,7 +43,13 @@ BIOMES = ("temperate", "desert", "arctic", "volcanic", "tropical")
 SIZE = 512
 WEBP_QUALITY = (88, 84, 80, 76, 72, 68, 64, 60)  # highest that fits the budget wins
 BUDGET = 150 * 1024                                # bytes per texture
-FLATTEN = 0.6                                      # 0 keeps the raw's light, 1 flattens it all
+ROCK_TONES = {
+    "temperate": (0.43, 0.44, 0.40),  # grey granite, green weathering
+    "desert": (0.63, 0.40, 0.28),     # oxidised sandstone
+    "arctic": (0.32, 0.36, 0.42),     # cold slate
+    "volcanic": (0.21, 0.20, 0.21),   # basalt and fine ash
+    "tropical": (0.52, 0.51, 0.45),   # salt-bleached limestone
+}
 
 
 def sstep(e0, e1, x):
@@ -104,19 +109,36 @@ def flatten(a: np.ndarray, strength: float, blur: Blur = blur_wrap) -> np.ndarra
     return np.clip(a * ratio[..., None], 0.0, 1.0)
 
 
-def rock_texture(biome: str) -> Image.Image:
+def rock_material(biome: str) -> np.ndarray:
+    """One albedo for the painted outcrop and the stone projected onto its sides."""
     src = np.asarray(Image.open(RAW / f"tex-{biome}-rock.webp").convert("RGB"), np.float32) / 255.0
     rng = np.random.default_rng([ord(c) for c in biome + "rock"])
-    a = flatten(make_seamless(src, rng), FLATTEN)
-    big = Image.fromarray((np.tile(a, (3, 3, 1)) * 255 + 0.5).astype(np.uint8), "RGB")
-    big = big.resize((3 * SIZE, 3 * SIZE), Image.LANCZOS)
-    return big.crop((SIZE, SIZE, 2 * SIZE, 2 * SIZE))
+    a = flatten(make_seamless(src, rng), 0.62)
+    L = lum(a)
+    # Preserve mottled mineral colours, soften photographic grit and reveal the wider fracture bands.
+    coarse = blur_wrap(L, 3.2)
+    medium = coarse - blur_wrap(L, 27)
+    tone = np.asarray(ROCK_TONES[biome], np.float32)
+    a += (tone - a.mean((0, 1))) * 0.85
+    a += (0.55 * medium - 0.26 * (L - coarse))[..., None]
+    return np.clip(a, 0.0, 1.0)
+
+
+def resample_periodic(a: np.ndarray, size: int) -> Image.Image:
+    """Lanczos resize with real neighbours beyond the old texture edges."""
+    tile = Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8))
+    n = tile.width
+    big = Image.new("RGB", (3 * n, 3 * n))
+    for y in (0, n, 2 * n):
+        for x in (0, n, 2 * n):
+            big.paste(tile, (x, y))
+    return big.resize((3 * size, 3 * size), Image.LANCZOS).crop((size, size, 2 * size, 2 * size))
 
 
 def write_rock_textures(biomes: Iterable[str] = BIOMES) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     for biome in biomes:
-        im = rock_texture(biome)
+        im = resample_periodic(rock_material(biome), SIZE)
         for q in WEBP_QUALITY:
             b = io.BytesIO()
             im.save(b, "WEBP", quality=q, method=6)

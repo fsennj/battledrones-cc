@@ -188,7 +188,7 @@ export function bridgeGeometry(w: World, colour: number, steel: boolean): { geo:
   const T = (tx: number, ty: number) => (tx >= 0 && ty >= 0 && tx < W && ty < H ? w.terrain[ty * W + tx]! : -1);
   const dry = dryBank;
   const { runOf, runs } = bridgeRuns(w.terrain, W, H);
-  const b = new ModelBuilder();
+  const b = new ModelBuilder({ grade: 0.14 });
   const spans: DeckSpan[] = [];
   const base = new THREE.Color(colour);
   const tone = (k: number) => _c.copy(base).multiplyScalar(k).getHex();
@@ -256,7 +256,7 @@ export function bridgeGeometry(w: World, colour: number, steel: boolean): { geo:
     const kind = (u: number, v: number) => (main && Math.abs(u) <= hl && Math.abs(v) <= hw ? 2 : under(u + mid, v + best.c) === 2 ? 1 : 0);
 
     // the run's tiles: a timber (or steel) bed a step under the main deck
-    for (const i of tiles) b.box(1, 0.16, 1, [(i % W) + 0.5, -0.08, Math.floor(i / W) + 0.5], tone(0.5));
+    for (const i of tiles) b.box(1, 0.16, 1, [(i % W) + 0.5, -0.08, Math.floor(i / W) + 0.5], tone(0.52));
     if (main) {
       // the main deck's own slab, a hair above the bed so the two never fight
       b.box(hl * 2, 0.13, hw * 2, P(0, 0.012 - 0.065, 0), tone(0.55), yaw);
@@ -265,16 +265,15 @@ export function bridgeGeometry(w: World, colour: number, steel: boolean): { geo:
         if (steel)
           for (let k = 0; k < Math.floor(hl * 4); k++)
             b.box(0.13, 0.006, 0.07, P(-hl + 0.125 + k * 0.25, TOP + 0.003, s * (hw - 0.05)), k % 2 ? 0x2b2d30 : 0xc89a2a, yaw);
-        else b.box(hl * 2, 0.012, 0.07, P(0, TOP + 0.002, s * (hw - 0.035)), tone(0.45), yaw);
+        else b.box(hl * 2, 0.012, 0.07, P(0, TOP + 0.002, s * (hw - 0.035)), tone(0.56), yaw);
       }
       // abutments where it meets each bank (their tops under the deck, so nothing is coplanar)
-      for (const s of [-1, 1]) b.box(0.4, 0.4, hw * 2 + 0.12, P(s * (hl + 0.1), -0.025 - 0.2, 0), steel ? 0x3a3634 : 0x6a655c, yaw);
+      for (const s of [-1, 1]) bridgeSeat(b, P, yaw, s * hl, hw, steel);
       // piers into the river, a cap beam across under each
       const piers = Math.max(1, Math.round((hl * 2) / 1.8));
       for (let k = 0; k < piers; k++) {
         const u = -hl + (k + 0.5) * ((hl * 2) / piers);
-        b.box(0.24, 0.12, hw * 2 + 0.1, P(u, -0.2, 0), 0x34322f, yaw);
-        for (const s of [-0.6, 0.6]) b.box(0.26, 0.9, 0.26, P(u, -0.7, s * hw), steel ? 0x2a2a2c : 0x5d5850, yaw);
+        bridgePier(b, P, yaw, u, hw, steel);
       }
     }
     // planks (or plates) across the crossing, over the main deck and the side bays alike; each is
@@ -299,8 +298,7 @@ export function bridgeGeometry(w: World, colour: number, steel: boolean): { geo:
         if (runKind && end - runStart > 0.06) {
           const top = runKind === 2 ? TOP : BAY;
           const bot = runKind === 2 ? 0.012 : 0.002;
-          const shadeK = steel ? (k % 2 ? 0.9 : 1.02) : 0.86 + hash(k, 3) * 0.24;
-          b.box(pw, top - bot, end - runStart, P(u, (top + bot) / 2, (runStart + end) / 2), tone(shadeK * (runKind === 2 ? 1 : 0.74)), yaw);
+          deckPanel(b, P, yaw, tone, steel, k, u, pw, runStart, end, bot, top, runKind === 2);
         }
         runStart = v;
         runKind = kd;
@@ -318,17 +316,7 @@ export function bridgeGeometry(w: World, colour: number, steel: boolean): { geo:
         const along = dy !== 0; // the edge runs along x
         const ex = tx + 0.5 + dx * (0.5 - KW / 2);
         const ez = ty + 0.5 + dy * (0.5 - KW / 2);
-        if (steel) {
-          // hazard-striped kerb, a top rail and a mid rail
-          for (let k = 0; k < 4; k++) {
-            const o = -0.375 + k * 0.25;
-            b.box(along ? 0.25 : KW, 0.07, along ? KW : 0.25, [ex + (along ? o : 0), 0.035, ez + (along ? 0 : o)], k % 2 ? 0x2b2d30 : 0xc89a2a);
-          }
-          for (const y of [0.33, 0.19]) b.box(along ? 1 : 0.045, 0.04, along ? 0.045 : 1, [ex, y, ez], 0x5a5550);
-        } else {
-          b.box(along ? 1 : KW, 0.075, along ? KW : 1, [ex, 0.0375, ez], tone(0.5));
-          b.box(along ? 1 : 0.05, 0.045, along ? 0.05 : 1, [ex, 0.24, ez], 0x5a4632);
-        }
+        bridgeRail(b, (u, y, v) => along ? [ex + u, y, ez + v] : [ex - v, y, ez + u], { rot: [0, along ? 0 : -Math.PI / 2, 0] }, 1, tone, steel);
         // the edge's two ends get posts
         const ends = along
           ? [[tx, ty + (dy > 0 ? 1 : 0)], [tx + 1, ty + (dy > 0 ? 1 : 0)]]
@@ -349,7 +337,7 @@ export function bridgeGeometry(w: World, colour: number, steel: boolean): { geo:
         }
       const px = x + Math.sign(ox) * KW * 0.55;
       const pz = z + Math.sign(oz) * KW * 0.55;
-      b.box(0.09, steel ? 0.36 : 0.27, 0.09, [px, steel ? 0.18 : 0.135, pz], steel ? tone(0.8) : tone(0.5));
+      bridgePost(b, px, pz, tone, steel);
       // a pile under each outer corner, down into the river
       if (n === 1) b.box(0.13, 0.9, 0.13, [x + Math.sign(ox) * 0.12, -0.55, z + Math.sign(oz) * 0.12], steel ? 0x2a2a2c : 0x4a3a2c);
     }
@@ -393,33 +381,115 @@ function slantedBridge(b: ModelBuilder, r: BridgeRun, spans: DeckSpan[], tone: (
   const pitch = (hl * 2) / nP;
   const pw = pitch - (steel ? 0.04 : 0.035);
   const KW = 0.09;
-  for (let k = 0; k < nP; k++) {
-    const shadeK = steel ? (k % 2 ? 0.9 : 1.02) : 0.86 + hash(k, 3) * 0.24;
-    b.box(pw, TOP - 0.012, hw * 2 - KW * 2, P(-hl + (k + 0.5) * pitch, (TOP + 0.012) / 2, 0), tone(shadeK), yaw);
-  }
+  for (let k = 0; k < nP; k++) deckPanel(b, P, yaw, tone, steel, k, -hl + (k + 0.5) * pitch, pw, KW - hw, hw - KW, 0.012, TOP, true);
   for (const s of [-1, 1]) {
     const v = s * (hw - KW / 2);
-    if (steel) {
-      // hazard-striped kerbs, a top rail and a mid rail
-      const nK = Math.max(2, Math.round((hl * 2) / 0.25));
-      for (let k = 0; k < nK; k++) b.box((hl * 2) / nK, 0.07, KW, P(-hl + (k + 0.5) * ((hl * 2) / nK), 0.035, v), k % 2 ? 0x2b2d30 : 0xc89a2a, yaw);
-      for (const y of [0.33, 0.19]) b.box(hl * 2, 0.04, 0.045, P(0, y, v), 0x5a5550, yaw);
-    } else {
-      b.box(hl * 2, 0.075, KW, P(0, 0.0375, v), tone(0.5), yaw);
-      b.box(hl * 2, 0.045, 0.05, P(0, 0.24, v), 0x5a4632, yaw);
-    }
-    // posts about a tile apart, one at each end
+    bridgeRail(b, (u, y, across) => P(u, y, v + across), yaw, hl * 2, tone, steel);
     const nPost = Math.max(1, Math.round(hl * 2));
-    for (let k = 0; k <= nPost; k++)
-      b.box(0.09, steel ? 0.36 : 0.27, 0.09, P(-hl + 0.05 + (k * (hl * 2 - 0.1)) / nPost, steel ? 0.18 : 0.135, v), steel ? tone(0.8) : tone(0.5), yaw);
-    // abutments where it meets each bank (their tops under the deck, so nothing is coplanar)
-    b.box(0.4, 0.4, hw * 2 + 0.12, P(s * (hl + 0.1), -0.025 - 0.2, 0), steel ? 0x3a3634 : 0x6a655c, yaw);
+    for (let k = 0; k <= nPost; k++) {
+      const [x, , z] = P(-hl + 0.05 + (k * (hl * 2 - 0.1)) / nPost, 0, v);
+      bridgePost(b, x, z, tone, steel, yaw);
+    }
+    bridgeSeat(b, P, yaw, s * hl, hw, steel);
   }
-  // piers into the river, a cap beam across under each
   const piers = Math.max(1, Math.round((hl * 2) / 1.8));
   for (let k = 0; k < piers; k++) {
     const u = -hl + (k + 0.5) * ((hl * 2) / piers);
-    b.box(0.24, 0.12, hw * 2 + 0.1, P(u, -0.2, 0), 0x34322f, yaw);
-    for (const s of [-0.7, 0.7]) b.box(0.26, 0.9, 0.26, P(u, -0.7, s * hw), steel ? 0x2a2a2c : 0x5d5850, yaw);
+    bridgePier(b, P, yaw, u, hw, steel);
+  }
+}
+
+type BridgePoint = (u: number, y: number, v: number) => Vec3;
+type BridgeYaw = { rot: Vec3 };
+
+/** A flat, skewable strip in the deck plane, baked into the same mesh as its panel. */
+function deckStrip(b: ModelBuilder, p: BridgePoint, y: number, a: number, start: number, z: number, end: number, width: number, hex: number): void {
+  const d = width / 2;
+  const left = p(a - d, y, start);
+  const right = p(a + d, y, start);
+  const farLeft = p(z - d, y, end);
+  const farRight = p(z + d, y, end);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute([...left, ...farLeft, ...farRight, ...left, ...farRight, ...right], 3));
+  b.add(geo, [0, 0, 0], hex);
+}
+
+function deckPanel(
+  b: ModelBuilder, p: BridgePoint, yaw: BridgeYaw, tone: (k: number) => number, steel: boolean,
+  k: number, u: number, width: number, start: number, end: number, bottom: number, top: number, main: boolean
+): void {
+  if (width <= 0 || end <= start) return;
+  const length = end - start;
+  const tint = (steel ? 0.93 + hash(k, 3) * 0.17 : 0.88 + hash(k, 3) * 0.44) * (main ? 1 : 0.72);
+  const hex = steel ? _c.setHex(0x677174).multiplyScalar(tint).getHex() : tone(tint);
+  b.block(width, top - bottom, length, p(u, (top + bottom) / 2, (start + end) / 2), hex, { ...yaw, bevel: 0.008, edge: 1.26 });
+  if (length < 0.25 || width < 0.08) return;
+  if (steel) {
+    const joint = _c.setHex(hex).multiplyScalar(0.64).getHex();
+    const rib = _c.setHex(hex).multiplyScalar(1.32).getHex();
+    const railU = u - width * 0.27;
+    deckStrip(b, p, top + 0.001, railU, start + 0.025, railU, end - 0.025, 0.022, joint);
+    deckStrip(b, p, top + 0.001, railU + 0.033, start + 0.03, railU + 0.033, end - 0.03, 0.015, rib);
+    for (const v of [start + 0.065, end - 0.065])
+      b.cyl(0.023, 0.026, 0.014, 5, p(u + width * 0.24, top + 0.006, v), rib);
+    return;
+  }
+  // Two broken grain lines per board, in the direction of the wood fibres.
+  for (const side of [-1, 1]) {
+    const grain = u + width * (0.15 + hash(k, 10 + side) * 0.13) * side;
+    const a = start + length * (0.06 + hash(k, 20 + side) * 0.28);
+    const z = end - length * (0.06 + hash(k, 30 + side) * 0.28);
+    deckStrip(b, p, top + 0.001, grain, a, grain - side * 0.012, z, 0.017, tone(tint * (side > 0 ? 0.66 : 1.24)));
+  }
+  if (k % 3 === 0)
+    for (const v of [start + 0.065, end - 0.065])
+      deckStrip(b, p, top + 0.002, u, v - 0.022, u, v + 0.022, 0.032, 0x3a3934);
+}
+
+function bridgeRail(b: ModelBuilder, p: BridgePoint, yaw: BridgeYaw, len: number, tone: (k: number) => number, steel: boolean): void {
+  if (steel) {
+    b.block(len, 0.072, 0.09, p(0, 0.036, 0), 0x343638, { ...yaw, bevel: 0.009 });
+    const stripes = Math.max(2, Math.round(len / 0.25));
+    const step = len / stripes;
+    for (let k = 0; k < stripes; k++) {
+      const u = -len / 2 + (k + 0.5) * step;
+      deckStrip(b, p, 0.073, u - 0.035, -0.035, u + 0.035, 0.035, step * 0.52, 0xcaa045);
+    }
+    b.block(len, 0.045, 0.054, p(0, 0.33, 0), 0x677478, { ...yaw, bevel: 0.008, edge: 1.4 });
+    b.box(len, 0.029, 0.038, p(0, 0.19, 0), 0x495152, yaw);
+    return;
+  }
+  b.block(len, 0.075, 0.09, p(0, 0.0375, 0), tone(0.56), { ...yaw, bevel: 0.008 });
+  b.block(len, 0.055, 0.064, p(0, 0.24, 0), tone(0.83), { ...yaw, bevel: 0.008, edge: 1.35 });
+  // Oblique braces under the top rail give the timber span a distinct profile.
+  const bays = Math.max(1, Math.round(len));
+  const step = len / bays;
+  for (let k = 0; k < bays; k++) {
+    const u = -len / 2 + (k + 0.5) * step;
+    const slope = (k % 2 ? -1 : 1) * Math.atan2(0.15, step * 0.8);
+    b.box(Math.hypot(step * 0.8, 0.15), 0.032, 0.033, p(u, 0.147, 0), tone(0.59), { rot: [0, yaw.rot[1], slope] });
+  }
+}
+
+function bridgePost(b: ModelBuilder, x: number, z: number, tone: (k: number) => number, steel: boolean, yaw?: BridgeYaw): void {
+  const h = steel ? 0.36 : 0.27;
+  b.block(0.085, h, 0.085, [x, h / 2, z], steel ? 0x4c5859 : tone(0.65), { ...yaw, bevel: 0.006 });
+  b.block(0.09, 0.027, 0.09, [x, h - 0.009, z], steel ? 0x8b918e : 0x58534a, { ...yaw, bevel: 0.006, edge: 1.28 });
+}
+
+function bridgeSeat(b: ModelBuilder, p: BridgePoint, yaw: BridgeYaw, edge: number, hw: number, steel: boolean): void {
+  // Seat the footing under the deck so its top cannot clip through the graded banks.
+  const depth = Math.min(0.3, Math.abs(edge));
+  const u = edge - Math.sign(edge) * depth / 2;
+  const width = hw * 2 - 0.08;
+  b.block(depth, 0.36, width, p(u, -0.245, 0), steel ? 0x494742 : 0x6d6659, { ...yaw, bevel: 0.025 });
+  b.box(depth, 0.035, width, p(u, -0.045, 0), steel ? 0x626661 : 0x877f6e, yaw);
+}
+
+function bridgePier(b: ModelBuilder, p: BridgePoint, yaw: BridgeYaw, u: number, hw: number, steel: boolean): void {
+  b.block(0.24, 0.12, hw * 2 + 0.1, p(u, -0.2, 0), steel ? 0x47494a : 0x4d3d31, { ...yaw, bevel: 0.018 });
+  for (const s of [-0.65, 0.65]) {
+    b.block(0.26, 0.9, 0.26, p(u, -0.7, s * hw), steel ? 0x3b3f3d : 0x625144, { ...yaw, bevel: 0.016, taper: 0.12 });
+    b.box(0.26, 0.046, 0.26, p(u, -0.29, s * hw), steel ? 0x676e6c : 0x45413a, yaw);
   }
 }

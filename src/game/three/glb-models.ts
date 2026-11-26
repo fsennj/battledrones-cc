@@ -2,6 +2,9 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { BuildingKind, UnitKind } from "../../sim/types";
 
+declare const __MODEL_REVS__: Record<string, string> | undefined;
+const MODEL_REVS = typeof __MODEL_REVS__ === "undefined" ? {} : __MODEL_REVS__;
+
 /**
  * Hand-built models from Blender (art/blender/*.py -> public/assets/models/*.glb) replace the
  * procedural ones, unit by unit and building by building. Each animated mesh is authored in
@@ -28,7 +31,7 @@ const GLB_UNITS: Partial<Record<UnitKind, string>> = Object.fromEntries(
 );
 /** Buildings with Blender geometry, including separately animated turret or radar heads. */
 const GLB_BUILDINGS: Partial<Record<BuildingKind, string>> = Object.fromEntries(
-  (["hq", "fab-plant", "depot", "airpad", "radar", "sam-site", "turret", "tech-lab"] as BuildingKind[]).map((k) => [k, `assets/models/${k}.glb`])
+  (["hq", "fab-plant", "depot", "airpad", "radar", "sam-site", "turret", "tech-lab", "assembly-bay", "gantry"] as BuildingKind[]).map((k) => [k, `assets/models/${k}.glb`])
 );
 const loaded = new Map<UnitKind | BuildingKind, GlbParts>();
 
@@ -97,7 +100,8 @@ export async function loadGlbModels(onLoaded: (kind: UnitKind | BuildingKind) =>
   await Promise.all(
     all.map(async ([kind, url]) => {
       try {
-        const gltf = await loader.loadAsync(base + url);
+        const rev = MODEL_REVS[url];
+        const gltf = await loader.loadAsync(`${base}${url}${rev ? `?v=${rev}` : ""}`);
         const mesh = (name: string) => {
           const o = gltf.scene.getObjectByName(name);
           const m = o && ((o as THREE.Mesh).isMesh ? (o as THREE.Mesh) : (o.children.find((c) => (c as THREE.Mesh).isMesh) as THREE.Mesh | undefined));

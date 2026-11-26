@@ -26,6 +26,14 @@ function terrainRevisions(): Record<string, string> {
   return revs;
 }
 
+/** Fingerprint public GLBs individually so the game can refresh art independently of the shell. */
+function modelRevisions(): Record<string, string> {
+  const dir = fileURLToPath(new URL("public/assets/models", import.meta.url));
+  return Object.fromEntries(readdirSync(dir).filter((f) => f.endsWith(".glb")).sort().map((f) => [
+    `assets/models/${f}`, createHash("sha256").update(readFileSync(join(dir, f))).digest("hex").slice(0, 12)
+  ]));
+}
+
 /**
  * The showcase battle records (battles/showcase/) go out with the build, at
  * the same path, so the game's `?replay=` links and the record viewer
@@ -50,6 +58,7 @@ export default defineConfig({
   server: { host: true },
   define: {
     __TERRAIN_REVS__: JSON.stringify(terrainRevisions()),
+    __MODEL_REVS__: JSON.stringify(modelRevisions()),
     // the sim this build plays: the battle viewer checks a record played by other code before it vouches for it
     __SIM_HASH__: JSON.stringify(simHash(fileURLToPath(new URL(".", import.meta.url)))),
     // a sound duel pairs only two phones running the same sim and duel code (SOUND-DUEL.md)
@@ -82,9 +91,8 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       // precache the shell, icons and menu art; painted map terrain
-      // (a few MB per map) and each biome's rock material are cached on
-      // first play instead
-      includeAssets: ["assets/icons/*", "assets/icons/red/*", "assets/icons/green/*", "assets/icons/purple/*", "assets/ui/*", "assets/audio/radio-en-*.mp3", "assets/maps/*/thumb.webp", "icons/*"],
+      // (a few MB per map) is cached on first play instead.
+      includeAssets: ["assets/icons/*", "assets/icons/red/*", "assets/icons/green/*", "assets/icons/purple/*", "assets/ui/*", "assets/audio/radio-en-*.mp3", "assets/maps/*/thumb.webp", "assets/textures/rock-*.webp", "icons/*"],
       workbox: {
         // There are no client-side routes. Exact precached URLs still work
         // offline, but /v1/ etc. must reach their own game and service worker.

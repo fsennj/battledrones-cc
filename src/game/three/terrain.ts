@@ -3,6 +3,7 @@ import { ECONOMY } from "../../sim/balance";
 import { Vis } from "../../sim/fog";
 import { Terrain, type Biome, type Faction, type World } from "../../sim/types";
 import { Canopy } from "./canopy";
+import { coverGeos, groundCoverMat } from "./ground-cover";
 import { canopyMat, fogged, fowUniforms, modelMat } from "./materials";
 import { patchCrag, patchGround, patchLiquid, type GroundUniforms, type LiquidUniforms, type RockUniforms } from "./terrain-glsl";
 import { bridgeGeometry, type DeckSpan } from "./terrain-bridges";
@@ -264,6 +265,7 @@ export class Terrain3D {
     this.buildWater();
     this.buildBridges();
     this.buildTrees();
+    this.buildGroundCover();
     this.buildRocks(painted);
     this.buildPiles();
 
@@ -837,6 +839,36 @@ export class Terrain3D {
     }
     // (thinned over squads in the woods: see thinCanopy)
     if (spots.length) this.canopy = new Canopy(this.W, this.H, this.scatter(treeGeos(this.world.biome), spots, canopyMat()));
+  }
+
+  /** Vegetation is visual only and stays clear of road and bridge decks. */
+  private buildGroundCover(): void {
+    const w = this.world;
+    const spots: Spot[] = [];
+    const dry = w.biome === "arctic" || w.biome === "volcanic";
+    const border = [[-1, 0], [1, 0], [0, -1], [0, 1]] as const;
+    for (let i = 0; i < w.terrain.length; i++) {
+      const t = w.terrain[i];
+      if (t !== Terrain.Ground && t !== Terrain.Rough) continue;
+      const x = i % this.W, y = Math.floor(i / this.W);
+      let wet = false, wood = false;
+      for (const [dx, dy] of border) {
+        const neighbor = this.tile(x + dx, y + dy);
+        wet ||= neighbor === Terrain.Water || neighbor === Terrain.Shallows;
+        wood ||= neighbor === Terrain.Forest;
+      }
+      const chance = wet ? 0.39 : wood ? 0.24 : t === Terrain.Rough ? 0.13 : 0.053;
+      if (hash(i, 75) > chance * (dry ? 0.52 : 1)) continue;
+      spots.push({
+        x: x + 0.19 + hash(i, 76) * 0.62,
+        y: y + 0.19 + hash(i, 77) * 0.62,
+        s: 0.72 + hash(i, 78) * 0.57,
+        r: hash(i, 79) * Math.PI * 2,
+        v: wet && !dry ? 1 : 0,
+        sink: 0.003
+      });
+    }
+    if (spots.length) this.scatter(coverGeos(w.biome), spots, groundCoverMat(), false);
   }
 
   /**

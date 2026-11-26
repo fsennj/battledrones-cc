@@ -396,5 +396,12 @@ const loop = () => {
 };
 loop();
 addEventListener("resize", () => stage.resize());
-(window as unknown as { ready: boolean; gallery: { at(ms: number): void } }).ready = true;
-(window as unknown as { gallery: { at(ms: number): void } }).gallery = { at };
+const gallery = {
+  at,
+  background(hex: string): void {
+    if (!icon) return;
+    stage.scene.background = new THREE.Color(hex);
+    stage.render();
+  }
+};
+Object.assign(window, { ready: true, gallery });
