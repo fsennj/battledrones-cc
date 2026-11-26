@@ -27,8 +27,8 @@
 /** The relay's two seats of a room. */
 export type RelayRole = "host" | "guest";
 
-/** The deployed relay (relay/fly.toml). */
-export const RELAY_URL = "wss://battledrones-relay.fly.dev";
+/** A fork can supply its own relay at build time. */
+export const RELAY_URL = import.meta.env?.VITE_BATTLEDRONES_RELAY_URL?.trim().replace(/\/+$/, "") || "wss://battledrones-relay.fly.dev";
 
 /** Room codes: Crockford base32 (no I, L, O, U), as the relay accepts them. */
 export const ROOM_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -211,7 +211,8 @@ export class RelaySocket {
     try {
       ws = this.makeSocket(this.url);
     } catch (e) {
-      this.end(e instanceof Error ? e.message : String(e));
+      // A bad endpoint can fail in the constructor, before its lobby attaches onError.
+      queueMicrotask(() => this.end(e instanceof Error ? e.message : String(e)));
       return;
     }
     this.ws = ws;

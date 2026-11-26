@@ -22,6 +22,7 @@ import { sfx } from "../game/audio";
 import { mapAssetBase } from "../game/assets";
 import { loadCareer, opUnlocked, opsCompleted, settlementOf, starCount, type CareerData } from "../game/career";
 import { addReportSection, type ReportContext, type ReportOpts } from "./report";
+import { openSheet } from "./career";
 
 /**
  * Ops UI: the menu's op cards and briefing sheet, the in-match goal pill
@@ -383,14 +384,10 @@ export function mountMenuOps(menu: HTMLElement, hooks: { start(op: OpDef): void;
   };
 
   function openBrief(op: OpDef): void {
-    menu.querySelector(".sheet-wrap")?.remove();
     const rec = career.ops[op.id];
     const mask = rec?.stars ?? 0;
     const note = rulesNote(op);
-    const wrap = document.createElement("div");
-    wrap.className = "sheet-wrap";
-    wrap.innerHTML = `<div class="sheet opbrief" role="dialog">
-      <div class="ob-head">
+    const wrap = openSheet(menu, "opbrief", `<div class="ob-head">
         <img src="${mapAssetBase(op.map)}/thumb.webp" alt="" draggable="false"/>
         <div><span class="ob-n">Op ${opIndex(op.id) + 1} of ${OPS.length}</span><h2>${op.icon} ${esc(op.title)}</h2>
           <p class="ob-where">${mapName(op.map)} · ${enemyLine(op)}</p></div>
@@ -409,14 +406,7 @@ export function mountMenuOps(menu: HTMLElement, hooks: { start(op: OpDef): void;
           <p class="ob-tip">💡 ${esc(op.tip)}</p>
         </div>
       </div>
-      <div class="sh-actions"><button class="cta" id="ob-start">▶ Start op</button></div>
-    </div>`;
-    menu.appendChild(wrap);
-    const close = () => wrap.remove();
-    wrap.addEventListener("click", (e) => {
-      if (e.target === wrap) close();
-    });
-    wrap.querySelector(".sheet-close")?.addEventListener("click", close);
+      <div class="sh-actions"><button class="cta" id="ob-start">▶ Start op</button></div>`);
     wrap.querySelector("#ob-start")?.addEventListener("click", () => hooks.start(op));
   }
 

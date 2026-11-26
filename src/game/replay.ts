@@ -200,10 +200,10 @@ export function parseRecord(text: string): BattleRecord {
   try {
     r = JSON.parse(text) as BattleRecord;
   } catch {
-    throw new Error("That isn't JSON: paste the whole .json file a battle wrote to battles/");
+    throw new Error("Couldn't read the JSON. Paste the complete battle record or choose the original file.");
   }
   if (!r || typeof r !== "object" || r.v !== 1 || !Array.isArray(r.turns) || !Array.isArray(r.hashes) || !r.seats)
-    throw new Error("That isn't a battle record (tools/arena.ts and llm battledrones write them to battles/)");
+    throw new Error("Invalid replay format. Choose a Battle Drones record saved from a match.");
   if (!isKnownMapId(r.map)) throw new Error(`This battle was played on "${r.map}", a map this version of the game doesn't have`);
   if (!r.end && !r.tick) throw new Error("This battle hasn't been played past its first round yet");
   return r;

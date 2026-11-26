@@ -97,7 +97,7 @@ export default defineConfig({
         // There are no client-side routes. Exact precached URLs still work
         // offline, but /v1/ etc. must reach their own game and service worker.
         navigateFallback: null,
-        globPatterns: ["**/*.{js,css,html}"],
+        globPatterns: ["**/*.{js,css,html,woff,woff2}"],
         // the battle viewer's check ahead (game/replay-check.worker.ts) carries a copy of the sim, 50 KB
         // gzipped and new with every sim change: fetched only when a replay needs checking
         globIgnores: ["**/replay-check.worker-*.js"],
@@ -107,6 +107,12 @@ export default defineConfig({
             urlPattern: MAP_ART,
             handler: "CacheFirst",
             options: { cacheName: "battledrones-maps", expiration: { maxEntries: 120 } }
+          },
+          {
+            // The versioned model URL is the cache key, so new art updates and offline rematches keep their geometry.
+            urlPattern: ({ sameOrigin, url }) => sameOrigin && /\/assets\/models\/[^/]+\.glb$/.test(url.pathname),
+            handler: "CacheFirst",
+            options: { cacheName: "battledrones-models", expiration: { maxEntries: 64 } }
           },
           {
             // (served from the cache, refreshed behind it: a re-tuned texture reaches players next game)

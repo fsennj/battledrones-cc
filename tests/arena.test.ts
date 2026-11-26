@@ -358,8 +358,8 @@ describe("a pasted battle record", () => {
     a.advance();
     const json = JSON.stringify(a.record);
     expect(parseRecord(json).end).toEqual(a.record.end);
-    expect(() => parseRecord("{not json")).toThrow(/isn't JSON/);
-    expect(() => parseRecord('{"hello": 1}')).toThrow(/isn't a battle record/);
+    expect(() => parseRecord("{not json")).toThrow(/Couldn't read the JSON/);
+    expect(() => parseRecord('{"hello": 1}')).toThrow(/Invalid replay format/);
     expect(() => parseRecord(json.replace('"map":"frostbite"', '"map":"atlantis"'))).toThrow(/"atlantis", a map this version of the game doesn't have/);
   });
 });

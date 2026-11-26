@@ -5,6 +5,7 @@ import { sfx } from "../game/audio";
 import { PLAYER } from "../game/controller";
 import { fullscreen } from "./fullscreen";
 import { iconUrl } from "../game/side-style";
+import { dialogKeys } from "./dialog-keys";
 
 /**
  * The pre-match opener choice: three big cards over the (frozen) battlefield.
@@ -60,10 +61,13 @@ export function showOpenerPicker(opts: OpenerPickerOptions): { destroy(): void }
   const side = opts.side ?? PLAYER;
   const el = document.createElement("div");
   el.className = "openers";
+  el.setAttribute("role", "dialog");
+  el.setAttribute("aria-modal", "true");
+  el.setAttribute("aria-labelledby", "opener-title");
   el.innerHTML = `
     <button class="op-back" title="Back to the menu">‹ Menu</button>
     <div class="op-head">
-      <h2>Choose your opener</h2>
+      <h2 id="opener-title" tabindex="-1">Choose your opener</h2>
       <p class="op-ctx"></p>
     </div>
     <div class="op-cards">
@@ -85,6 +89,8 @@ export function showOpenerPicker(opts: OpenerPickerOptions): { destroy(): void }
   // keep touches on the overlay away from the game canvas underneath
   el.addEventListener("pointerdown", (e) => e.stopPropagation());
   root.appendChild(el);
+  dialogKeys(el);
+  el.querySelector<HTMLElement>("#opener-title")!.focus({ preventScroll: true });
 
   let picked = false;
   let timer = 0;
@@ -123,6 +129,7 @@ export function showOpenerPicker(opts: OpenerPickerOptions): { destroy(): void }
   // 1–3 belong to the cards while they're up: captured before the scene's
   // keyboard sees them (there they'd also be the squad hotkeys)
   const onKey = (e: KeyboardEvent) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
     const i = Number(e.key) - 1;
     if (!(i >= 0 && i < OPENER_IDS.length)) return;
     e.stopImmediatePropagation();

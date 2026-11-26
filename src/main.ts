@@ -165,22 +165,43 @@ async function startGame(feed?: MatchFeed): Promise<void> {
   loading.innerHTML = `<div class="loadbox"><p>Deploying to ${where}…</p><div class="loadtrack"><div id="loadbar"></div></div></div>`;
   hud.appendChild(loading);
   const bar = loading.querySelector<HTMLElement>("#loadbar");
-  // the painted terrain is draped over the 3D landscape; a failed chunk falls back to flat colours
-  const art = await loadTerrainArt(def.id, def.size, def.biome, (k) => {
-    if (bar) bar.style.width = `${Math.round(k * 90)}%`;
-  });
-  if (bar) bar.style.width = "100%";
-  // (let the full bar paint before the scene build blocks the main thread)
-  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
-  // /?side=red, in every build: a skirmish played as red against a blue AI, the side a sound duel's
-  // other phone plays (SOUND-DUEL.md "Playing red"). Not Last Stand, an op or the Daily Op, which
-  // are set up for blue, nor a watched match; a fed match (a replay, a duel) brings its own side.
-  // (before the scene: its presenters copy the side as they are built)
-  const asRed = new URLSearchParams(location.search).get("side") === "red";
-  if (asRed && !feed && gameMode.mode === "skirmish" && !gameMode.spectator && !gameMode.daily && !gameMode.op) setLocalSide("red");
-  const scene = new GameScene(document.getElementById("game")!, dpr(), art, feed);
-  window.addEventListener("resize", () => scene.resize());
-  window.addEventListener("orientationchange", () => setTimeout(() => scene.resize(), 200));
+  const game = document.getElementById("game")!;
+  try {
+    // The painted terrain falls back to flat colours when a chunk fails.
+    const art = await loadTerrainArt(def.id, def.size, def.biome, (k) => {
+      if (bar) bar.style.width = `${Math.round(k * 90)}%`;
+    });
+    if (bar) bar.style.width = "100%";
+    // Let the full bar paint before building the scene.
+    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+    // /?side=red applies to solo skirmish. A feed brings its own side.
+    const asRed = new URLSearchParams(location.search).get("side") === "red";
+    if (asRed && !feed && gameMode.mode === "skirmish" && !gameMode.spectator && !gameMode.daily && !gameMode.op) setLocalSide("red");
+    const scene = new GameScene(game, dpr(), art, feed);
+    window.addEventListener("resize", () => scene.resize());
+    window.addEventListener("orientationchange", () => setTimeout(() => scene.resize(), 200));
+  } catch (e) {
+    console.warn("battle startup failed:", e);
+    game.replaceChildren();
+    loading.id = "load-error";
+    loading.innerHTML = `<div class="panel" role="alertdialog" aria-labelledby="load-error-title">
+      <h2 id="load-error-title">Battle couldn't start</h2>
+      <p class="time"></p>
+      <button class="cta">Main menu</button>
+    </div>`;
+    const webgl = e instanceof Error && /WebGL context/i.test(e.message);
+    loading.querySelector("p")!.textContent = webgl
+      ? "Battle Drones needs WebGL 2. Enable hardware acceleration in your browser or try another browser."
+      : "Something went wrong while loading the battlefield. Return to the menu and try again.";
+    hud.appendChild(loading);
+    const back = loading.querySelector("button")!;
+    back.addEventListener("click", () => {
+      const duel = feed?.duel;
+      if (duel) duel.menu();
+      else fullscreen.reload();
+    });
+    back.focus();
+  }
 }
 
 // ------------------------------------------------------------ random maps ---
@@ -371,7 +392,6 @@ function showMenu(linkedMap?: string | null): void {
           <button class="cta alt" id="play-replay">Replays</button>
           <button class="cta alt" id="howto">How to play</button>
         </div>
-        <div class="help" id="helpbox" hidden>${HELP_HTML}</div>
       </main>
       <aside class="menu-meta" aria-label="Career and artwork">
         <a class="menu-art-link" href="art-comparison/">
@@ -704,8 +724,9 @@ function showMenu(linkedMap?: string | null): void {
     })
   );
   menu.querySelector("#howto")!.addEventListener("click", () => {
-    const h = menu.querySelector<HTMLElement>("#helpbox")!;
-    h.hidden = !h.hidden;
+    openSheet(menu, "helpsheet", `<div class="help-head"><h2>How to play</h2>
+      <button class="sheet-close x" aria-label="Close">✕</button></div><div class="help">${HELP_HTML}</div>
+      <div class="sh-actions"><button class="cta sheet-close">Close</button></div>`);
   });
 
   // one match per page: a second tap while the full-screen request is
@@ -739,9 +760,10 @@ function showMenu(linkedMap?: string | null): void {
   // an agent battle's record, pasted or picked: the viewer loads only now (game/replay.ts)
   menu.querySelector("#play-replay")!.addEventListener("click", () => {
     sfx.play("click", 0.5);
-    showReplayPicker(menu, async (json) => {
+    showReplayPicker(menu, async (json, commit) => {
       const { replayFromJson } = await import("./game/replay");
       const feed = replayFromJson(json);
+      if (!commit()) return;
       await begin(true, () => watchSetup(feed), feed);
     });
   });

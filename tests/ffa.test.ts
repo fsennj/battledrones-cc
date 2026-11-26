@@ -54,6 +54,7 @@ function fakeTime() {
 class FakeRelay {
   readonly rooms = new Map<string, { host?: FakeWs; guest?: FakeWs }>();
   latency = 40;
+  hostOpenDelay = 5;
   /** Rooms whose network is down (a friend's phone in a tunnel): no connection opens, open ones are cut. */
   readonly down = new Set<string>();
   /** The biggest message seen, and any socket closed for sending too fast. */
@@ -86,7 +87,7 @@ class FakeWs implements SocketLike {
     this.code = m[1]!;
     this.role = m[2] as "host" | "guest";
     this.tokensAt = relay.time.now();
-    relay.time.timers.setTimeout(() => this.join(), 5);
+    relay.time.timers.setTimeout(() => this.join(), this.role === "host" ? relay.hostOpenDelay : 5);
   }
   private join(): void {
     if (this.readyState !== 0) return;
@@ -350,6 +351,59 @@ describe("a lobby's seat waiting for a friend", () => {
 });
 
 describe("a four-player battle over the relay", () => {
+  it("shows a connection error if socket creation fails before the lobby is attached", async () => {
+    const time = fakeTime();
+    const guest = new FfaGuest({
+      code: CODE, seat: 1, build: BUILD, name: "P2", now: time.now, timers: time.timers,
+      socket: () => { throw new Error("Invalid relay address"); }
+    });
+    let changes = 0;
+    guest.onChange = () => changes++;
+    await Promise.resolve();
+    expect(guest.ended).toEqual({ why: "error", message: "Invalid relay address" });
+    expect(changes).toBe(1);
+  });
+
+  it("a lobby guest receives the start missed while both sockets reconnect", () => {
+    const { host, guests: [guest], time, relay } = lobby({ friends: [1] });
+    expect(guest!.phase).toBe("lobby");
+    const room = seatRoom(CODE, 1);
+    relay.hostOpenDelay = 200;
+    relay.cut(room);
+    const setup = host.start();
+    relay.mend(room);
+    time.advance(1000);
+    expect(guest!.phase).toBe("playing");
+    expect(guest!.match?.setup).toEqual(setup);
+  });
+
+  it.each([false, true])("a guest connects before the host socket opens (host starts early: %s)", (startEarly) => {
+    const time = fakeTime();
+    const relay = new FakeRelay(time);
+    const transport = { socket: relay.socket, now: time.now, timers: time.timers };
+    const guest = new FfaGuest({ code: CODE, seat: 1, build: BUILD, name: "P2", ...transport });
+    time.advance(150);
+    expect(guest.phase).toBe("joining");
+    const host = new FfaHost({
+      code: CODE, build: BUILD, map: "compass-rose", mutators: [], difficulty: "normal",
+      strategy: () => "balanced", random: () => 0.42, ...transport
+    });
+    if (startEarly) host.start();
+    time.advance(100);
+    expect(guest.phase).toBe("joining");
+    time.advance(500);
+    if (startEarly) {
+      expect(guest.ended?.why).toBe("started");
+    } else {
+      expect(guest.phase).toBe("lobby");
+      expect(host.views()[1]).toMatchObject({ kind: "friend", name: "P2" });
+      const setup = host.start();
+      time.advance(100);
+      expect(setup.seats[1]?.kind).toBe("human");
+      expect(guest.match?.setup).toEqual(setup);
+    }
+  });
+
   it("the lobby: friends join their seats, picks show, an open seat goes to an AI at Start", () => {
     const { host, guests, time, relay } = lobby({ friends: [1, 3], picks: { 1: "blitz", 3: "airwing" } });
     const views = host.views();

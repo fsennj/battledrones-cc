@@ -134,6 +134,22 @@ def test_origins(origin, allowed):
     run(t)
 
 
+def test_fork_origin_is_exact(monkeypatch):
+    fork = "https://battledrones.example.com"
+    monkeypatch.setattr(server, "EXTRA_ORIGINS", frozenset({fork}))
+
+    async def t(url, port):
+        room = f"{url}/K7QM2XP4"
+        async with connect(f"{room}/host", origin=fork) as a:
+            async with connect(f"{room}/guest", origin=fork) as b:
+                await a.send("ok")
+                assert await asyncio.wait_for(b.recv(), 2) == "ok"
+        async with connect(f"{room}/host", origin=f"{fork}.example.org") as a:
+            assert await closed_with(a) == 4003
+
+    run(t)
+
+
 def test_alone_too_long(monkeypatch):
     monkeypatch.setattr(server, "WATCH_SECONDS", 0.05)
     monkeypatch.setattr(server, "LONELY_SECONDS", 0.2)

@@ -812,6 +812,11 @@ export class GameScene {
   }
 
   private updateCamera(delta: number): void {
+    if (this.ctrl.paused) {
+      this.keys.clear();
+      this.glide = null;
+      return;
+    }
     const rig = this.stage.rig;
     if (this.directCamera(delta)) return;
     if (rig.zoom !== this.targetZoom) {
@@ -1804,8 +1809,8 @@ export class GameScene {
     };
     const cancel = (e: PointerEvent) => {
       fingers.delete(e.pointerId);
-      const p = toPointer(e);
-      if (!this.place.up(p)) this.gest.cancel(p);
+      this.place.forget(e.pointerId);
+      this.gest.cancel(toPointer(e));
     };
     // iOS Safari can end a touch with neither pointerup nor pointercancel (an
     // abandoned edge swipe), leaving a finger counted as down for good: every
@@ -1839,7 +1844,19 @@ export class GameScene {
       return !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
     };
     const keydown = (e: KeyboardEvent) => {
-      if (typing(e)) return;
+      if (e.defaultPrevented || typing(e) || this.holdStart) return;
+      if (e.repeat && e.key === "Escape") return;
+      const space = e.key === " " && !(e.target instanceof HTMLElement && e.target.closest("button, a[href], [role=button]"));
+      const pause = !e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "p" || space);
+      if (this.ctrl.paused || pause) {
+        if (!e.repeat && (pause || e.key === "Escape")) {
+          e.preventDefault();
+          this.hud.togglePause();
+        }
+        return;
+      }
+      const squad = /^Digit[1-3]$/.test(e.code);
+      if (e.altKey || ((e.ctrlKey || e.metaKey) && !squad)) return;
       if (/^Arrow/.test(e.code) || ["KeyW", "KeyA", "KeyS", "KeyD"].includes(e.code)) {
         if (!e.ctrlKey && !e.metaKey) {
           this.keys.add(e.code);
@@ -1856,17 +1873,14 @@ export class GameScene {
       if (this.finale || e.repeat) return; // (the cinematic: no zoom, squads or jumps)
       if (e.key === "+" || e.key === "=") this.zoomBy(1.3);
       else if (e.key === "-" || e.key === "_") this.zoomBy(1 / 1.3);
-      else if ((e.key === "p" || e.key === " ") && !this.holdStart) {
-        if (e.key === " ") e.preventDefault();
-        this.hud.togglePause();
-      } else if (e.key === "q") this.ctrl.selectArmy();
+      else if (e.key === "q") this.ctrl.selectArmy();
       else if (e.key === "u") this.ctrl.unloadSelected();
       else if (e.key === "g") this.ctrl.toggleAnchor(); // selected Goliaths anchor, or pack up
       else if (e.key === "Delete") this.ctrl.sellSelected();
       else if (e.key === "." && !this.interactive) this.aware.cycleSpeed(); // (a duel runs at one speed)
       else if (e.key === "j") this.aware.jump();
       else if (e.key === "c") this.toggleCine();
-      else if (/^Digit[1-3]$/.test(e.code)) {
+      else if (squad) {
         // squads: 1–3 select (twice: fly there); Ctrl/Cmd/Shift + 1–3 save
         const save = e.ctrlKey || e.metaKey || e.shiftKey;
         if (save) e.preventDefault();

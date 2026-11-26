@@ -62,6 +62,7 @@ export class FfaGuest {
   private sentAt = -Infinity;
   private heard = -Infinity;
   private pick: OpenerId | null = null;
+  private waitingForHost = true;
   private readonly name: string;
   private readonly build: string;
 
@@ -87,7 +88,10 @@ export class FfaGuest {
       now: this.clock,
       timers: this.timers
     });
-    this.socket.onOpen = () => this.hello();
+    this.socket.onOpen = () => {
+      this.waitingForHost = !this.match;
+      this.hello();
+    };
     this.socket.onError = (message) => this.end({ why: "error", message });
     this.timer = this.timers.setInterval(() => this.beat(), AT_MS);
   }
@@ -164,6 +168,8 @@ export class FfaGuest {
   /** Twice a second: how far we are, a ping, and orders that seem lost again. */
   private beat(): void {
     if (this.phase === "ended") return;
+    // The relay can open this socket before the host's is ready to receive.
+    if (this.waitingForHost && this.socket.state === "open") this.hello();
     const m = this.match;
     if (m) this.post({ t: "at", have: m.log.length, tick: m.world.tick });
     this.post({ t: "ping", at: this.clock() });
@@ -185,12 +191,17 @@ export class FfaGuest {
         if (msg.proto !== FFA_PROTO) return this.end({ why: "version" });
         this.lobby = msg;
         this.hostFinishing = false;
-        if (this.phase === "joining") this.phase = "lobby";
+        if (!this.match) {
+          const seated = msg.seats.some((seat) => seat.seat === this.seat && seat.kind === "friend");
+          this.waitingForHost = !seated;
+          this.phase = seated ? "lobby" : "joining";
+        }
         this.onChange?.();
         return;
       case "start": {
         // (a rejoin of the match already held: the log carries on; another one: start over)
         if (this.match?.setup.id === msg.setup.id) return;
+        this.waitingForHost = false;
         this.match = new FfaMatch(msg.setup);
         this.phase = "playing";
         this.onStart?.(msg.setup);

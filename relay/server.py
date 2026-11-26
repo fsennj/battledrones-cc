@@ -59,6 +59,7 @@ PING_SECONDS = 20.0
 CLOSE_SECONDS = 5.0
 # The game's own pages: https://simonw.github.io and https://*.simonw.workers.dev
 ORIGIN = re.compile(r"^https://(?:simonw\.github\.io|(?:[a-z0-9-]+\.)+simonw\.workers\.dev)$")
+EXTRA_ORIGINS = frozenset(origin.strip() for origin in os.environ.get("RELAY_EXTRA_ORIGINS", "").split(",") if origin.strip())
 
 log = logging.getLogger("relay")
 
@@ -119,7 +120,8 @@ async def watch(ws: ServerConnection, room: Room, seat: str) -> None:
 
 
 async def handler(ws: ServerConnection) -> None:
-    if not ORIGIN.match(ws.request.headers.get("Origin") or ""):
+    origin = ws.request.headers.get("Origin") or ""
+    if not ORIGIN.fullmatch(origin) and origin not in EXTRA_ORIGINS:
         await ws.close(4003, "origin not allowed")
         return
     match = PATH.match(ws.request.path)
@@ -192,7 +194,7 @@ async def main() -> None:
     # (the library logs every connection, health checks included)
     logging.getLogger("websockets").setLevel(logging.WARNING)
     port = int(os.environ.get("PORT", "8080"))
-    async with relay(port=port) as server:
+    async with relay(host=os.environ.get("RELAY_BIND", "0.0.0.0"), port=port) as server:
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):
             loop.add_signal_handler(sig, server.close)

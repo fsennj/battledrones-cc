@@ -28,6 +28,7 @@ import { PLAYER } from "../game/controller";
 import { loadBest } from "../game/survival";
 import { addReportSection, type ReportContext } from "./report";
 import { SIDE_NAME } from "../game/side-style";
+import { dialogKeys } from "./dialog-keys";
 
 /**
  * Career UI: the menu's rank badge, Daily Op card and mutator picker, the
@@ -188,15 +189,23 @@ export function mountMenuCareer(menu: HTMLElement, hooks: { playDaily(op: DailyO
 
 export function openSheet(host: HTMLElement, cls: string, html: string): HTMLElement {
   host.querySelector(".sheet-wrap")?.remove();
+  const opener = document.activeElement;
   const wrap = document.createElement("div");
   wrap.className = "sheet-wrap";
-  wrap.innerHTML = `<div class="sheet ${cls}" role="dialog">${html}</div>`;
+  wrap.innerHTML = `<div class="sheet ${cls}" role="dialog" aria-modal="true" tabindex="-1">${html}</div>`;
+  const dialog = wrap.firstElementChild as HTMLElement;
+  dialog.setAttribute("aria-label", dialog.querySelector("h2")?.textContent?.trim() ?? "");
   host.appendChild(wrap);
-  const close = () => wrap.remove();
+  const close = () => {
+    wrap.remove();
+    if (opener instanceof HTMLElement && opener.isConnected) opener.focus({ preventScroll: true });
+  };
+  dialogKeys(dialog, close);
   wrap.addEventListener("click", (e) => {
     if (e.target === wrap) close();
   });
   wrap.querySelectorAll(".sheet-close").forEach((b) => b.addEventListener("click", close));
+  dialog.focus({ preventScroll: true });
   return wrap;
 }
 

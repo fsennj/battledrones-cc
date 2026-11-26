@@ -26,6 +26,7 @@ import { fullscreen } from "./fullscreen";
 import { mapById } from "../sim/maps";
 import { SIDE_NAME, iconUrl } from "../game/side-style";
 import { sidesOf } from "../sim/sides";
+import { dialogKeys } from "./dialog-keys";
 
 export interface HudApi {
   world: World;
@@ -315,7 +316,7 @@ export function createHud(api: HudApi): Hud {
       </div>
     </div>
     <div id="card" class="card" hidden></div>
-    <div id="pause" class="screen" hidden></div>
+    <div id="pause" class="screen" role="dialog" aria-modal="true" aria-labelledby="p-title" tabindex="-1" hidden></div>
     <div id="endscreen" class="screen" hidden></div>
   `;
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
@@ -953,7 +954,10 @@ export function createHud(api: HudApi): Hud {
   const offMute = sfx.onChange(syncMute);
   let offToggles: (() => void) | null = null;
   muteBtn.addEventListener("click", () => sfx.setMuted(!sfx.muted));
-  $("#btn-menu").addEventListener("click", () => togglePause());
+  const pauseButton = $("#btn-menu");
+  pauseButton.addEventListener("click", () => togglePause());
+  shield(pauseEl);
+  dialogKeys(pauseEl, togglePause);
 
   for (const [id, factor] of [
     ["zoom-in", 1.45],
@@ -980,6 +984,7 @@ export function createHud(api: HudApi): Hud {
 
   /** The match is over: the end screen is up (or a duel ended with no result). Nothing pauses any more. */
   let over = false;
+  let pauseOpener: HTMLElement | null = null;
 
   function togglePause(): void {
     if (over || !endEl.hidden || w.winner) return; // over (the finale is playing): nothing to pause
@@ -988,30 +993,39 @@ export function createHud(api: HudApi): Hud {
     offToggles?.();
     offToggles = null;
     duelShown = null;
-    if (!api.ctrl.paused) return;
+    if (!api.ctrl.paused) {
+      (pauseOpener?.isConnected ? pauseOpener : pauseButton).focus({ preventScroll: true });
+      pauseOpener = null;
+      return;
+    }
+    const focused = document.activeElement;
+    pauseOpener = focused instanceof HTMLElement && root.contains(focused) ? focused : pauseButton;
     const duel = api.duel;
     const line = duel
       ? `vs ${duel.opponent} · ${duel.online ? "🌐" : "🔊"} ${duel.delayMs()} ms`
       : ops ? ops.pauseLine() : surv ? surv.pauseLine() : api.strategies ? "AI vs AI" : `vs ${api.enemy.strategy} AI · ${api.enemy.difficulty}`;
     pauseEl.innerHTML = `
       <div class="panel">
-        <h1>PAUSED</h1>
+        <h1 id="p-title">PAUSED</h1>
         <p class="time">${line}</p>
         ${ops ? ops.pauseHtml() : ""}
         ${pauseRulesHtml(w)}
         <button class="cta" id="p-resume">▶ Resume</button>
         <div id="p-sound"></div>
-        <button class="cta alt" id="p-help">How to play</button>
+        <button class="cta alt" id="p-help" aria-expanded="false" aria-controls="p-helptext">How to play</button>
         ${uncharted || duel ? "" : `<button class="cta alt" id="p-fog">${api.ctrl.showFog ? "Reveal map (debug)" : "Restore fog of war"}</button>`}
         ${duel ? `<div id="p-duel" class="p-duel"></div>` : `<button class="cta alt" id="p-quit">Quit to menu</button>`}
         <div id="p-helptext" class="help" hidden>${HELP_HTML}</div>
       </div>`;
-    shield(pauseEl);
     offToggles = mountAudioToggles(pauseEl.querySelector<HTMLElement>("#p-sound")!);
-    pauseEl.querySelector("#p-resume")!.addEventListener("click", togglePause);
-    pauseEl.querySelector("#p-help")!.addEventListener("click", () => {
+    const resume = pauseEl.querySelector<HTMLButtonElement>("#p-resume")!;
+    resume.addEventListener("click", togglePause);
+    resume.focus({ preventScroll: true });
+    const help = pauseEl.querySelector<HTMLButtonElement>("#p-help")!;
+    help.addEventListener("click", () => {
       const h = pauseEl.querySelector<HTMLElement>("#p-helptext")!;
       h.hidden = !h.hidden;
+      help.setAttribute("aria-expanded", String(!h.hidden));
     });
     pauseEl.querySelector("#p-fog")?.addEventListener("click", () => {
       api.ctrl.showFog = !api.ctrl.showFog;
@@ -1035,6 +1049,8 @@ export function createHud(api: HudApi): Hud {
   function renderDuelExits(duel: DuelHud, ask: DuelAsk | null): void {
     const box = pauseEl.querySelector<HTMLElement>("#p-duel");
     if (!box) return;
+    const focused = document.activeElement;
+    const focusId = focused instanceof HTMLElement && box.contains(focused) ? focused.id : null;
     const ex = duel.exits();
     const resigning = duel.resigning();
     duelShown = { ask, key: exitsKey(duel) };
@@ -1055,6 +1071,7 @@ export function createHud(api: HudApi): Hud {
         if (ask === "leave") duel.leave();
         else duel.resign(ask === "resign-leave");
       });
+      if (focusId !== null) box.querySelector<HTMLButtonElement>("#p-no")?.focus();
       return;
     }
     box.innerHTML = `${resigning ? "" : `<button class="cta alt" id="p-resign">🏳 Resign</button>`}
@@ -1063,6 +1080,10 @@ export function createHud(api: HudApi): Hud {
     box.querySelector("#p-resign")?.addEventListener("click", () => renderDuelExits(duel, "resign"));
     box.querySelector("#p-resign-leave")?.addEventListener("click", () => renderDuelExits(duel, "resign-leave"));
     box.querySelector("#p-leave")?.addEventListener("click", () => renderDuelExits(duel, "leave"));
+    if (focusId !== null) {
+      const next = Array.from(box.querySelectorAll("button")).find((b) => b.id === focusId) ?? box.querySelector("button");
+      (next ?? pauseEl.querySelector<HTMLButtonElement>("#p-resume"))?.focus();
+    }
   }
 
   // ------------------------------------------------------------- minimap ---
@@ -1452,6 +1473,7 @@ export function createHud(api: HudApi): Hud {
     if (api.ctrl.paused) {
       api.ctrl.paused = false;
       pauseEl.hidden = true;
+      pauseOpener = null;
       offToggles?.();
       offToggles = null;
       duelShown = null;
@@ -1559,7 +1581,12 @@ function cargoHtml(c: Unit): string {
 }
 
 export const HELP_HTML = `
-  <h3>Goal</h3><p>Destroy the enemy HQ and every Goliath it has. Protect yours: while a Goliath stands you aren't beaten, even with your HQ gone.</p>
+  <h3>Building</h3><p>Open <b>Base</b> and tap a structure to construct it. When it's ready, tap it again: a ghost appears on a free spot near your base. Tap the map (or drag the ghost) to move it, then tap the ghost or <b>✓ Place</b> to build. With a mouse, just click the spot. Build buttons marked ⚔ counter enemies you've seen; a tab marked <b>idle</b> has a factory doing nothing.</p>
+  <h3>Army</h3><p>Tap a unit to select it, drag-hold (long-press) to box-select, double-tap to grab all of that type on screen. With a mouse, Shift+click adds a unit to the selection or takes it out. Tap the ground to attack-move, tap an enemy to attack. <b>Move only</b> retreats without stopping to fight. <b>💤 Idle</b> grabs units with no orders.</p>
+  <h3>Camera</h3><p>Drag to pan, pinch to zoom, tap the minimap to jump. Pulsing arrows at the screen edge point at fights you can't see (red: you're being hit) — tap one to fly there, or tap ⚡ to cycle through them. Watching AI vs AI, the 🎥 cinematic camera (key C) follows the action by itself; pan or zoom and it hands the camera to you, taking it back a few seconds later.</p>
+  <h3>Economy</h3><p>Harvesters mine scrap piles and glowing crystals (worth more) and haul them to your HQ, a Depot or an anchored Goliath. More harvesters, more scrap. Destroyed units leave glinting <b>wrecks</b> worth 30% of their cost (a Last Stand wave's only 5%) for a minute: roll any ground unit over one to salvage it.</p>
+  <h3>Squads</h3><p>Hold a squad chip (<b>1</b>, <b>2</b>, <b>3</b>) to save the selected units into it. Tap it to select them again, double-tap to fly the camera there. It flashes red when a member is hit. Keys: 1–3 select, Ctrl+1–3 (or Shift+1–3) save.</p>
+  <h3>Skirmish</h3><p>Destroy the enemy HQ and every Goliath it has. Protect yours: while a Goliath stands you aren't beaten, even with your HQ gone.</p>
   <h3>Openers</h3><p>Every skirmish starts with a pick: <b>Blitz</b> (Fab Plant + 3 Stingers), <b>Industry</b> (Fab Plant, a third harvester, +200 scrap) or <b>Air Wing</b> (Airpad + 3 Wasps). The enemy picks one too.</p>
   <h3>Commander powers</h3><p>The ⚡ meter on the right fills slowly, and faster when you lose units. Spend it on <b>Barrage</b> (3 shells), <b>EMP</b> (freezes enemies for 4 s) or <b>Drop Pod</b> (3 units land where you can see): tap the button, then the map. At 6:00 the <b>Sky Hammer</b> comes online for both sides, an orbital strike every ${POWERS.hammer.cooldown / 60} minutes. Every strike shows a warning circle first: red ones are the enemy's, so move out!</p>
   <h3>Objectives</h3><p>📡 <b>Uplinks</b> sit in the contested middle of every map: park units in the ring to fill its bar (aircraft count half, harvesters not at all; with both sides inside it freezes). Holding one pays ${OBJECTIVES.uplink.income} scrap/s, lights up the fog around it and charges your ⚡ meter. 📦 <b>Supply drops</b> land in pairs from 1:30, every 75 s, announced 10 s ahead to both sides: the first unit to reach a crate takes it (scrap, Veterans, Field Repair, ⚡ charge, or a rare free Lancer). Unclaimed crates burn out after 45 s.</p>
@@ -1567,16 +1594,11 @@ export const HELP_HTML = `
   <h3>Last Stand</h3><p>No enemy base: hold out against endless waves. The top bar shows the next wave's theme (four of Air Raid, Armour Column, Artillery, Mixed and Bot Swarm, then a Boss every 5th) and the minimap arrow where it will enter. Clearing a wave pays scrap; with the field clear, <b>Call wave</b> brings the next one early for a bonus.</p>
   <h3>Ops</h3><p>A short campaign of handcrafted missions with a twist — hold a bridge, deliver scrap under air raids, decapitate a base with a strike group, fight with no income. Each has a goal pill under the clock (tap it for the objectives) and three stars: complete it, plus two harder conditions. The first three are open; every op you complete opens the next.</p>
   <h3>Career, Daily Op and mutators</h3><p>Wins, Last Stand waves and medals earn XP toward ten ranks; each map and difficulty has three stars (win, win under 8:00 — 12:00 on the Archipelago — and win without losing a building). The <b>Daily Op</b> is one seeded match a day, the same for everyone, and keeps a win streak. <b>Mutators</b> twist a skirmish's rules for both sides (no stars). Tap your rank on the menu for medals and records.</p>
-  <h3>Economy</h3><p>Harvesters mine scrap piles and glowing crystals (worth more) and haul them to your HQ, a Depot or an anchored Goliath. More harvesters, more scrap. Destroyed units leave glinting <b>wrecks</b> worth 30% of their cost (a Last Stand wave's only 5%) for a minute: roll any ground unit over one to salvage it.</p>
-  <h3>Building</h3><p>Open <b>Base</b> and tap a structure to construct it. When it's ready, tap it again: a ghost appears on a free spot near your base. Tap the map (or drag the ghost) to move it, then tap the ghost or <b>✓ Place</b> to build. With a mouse, just click the spot. Build buttons marked ⚔ counter enemies you've seen; a tab marked <b>idle</b> has a factory doing nothing.</p>
-  <h3>Army</h3><p>Tap a unit to select it, drag-hold (long-press) to box-select, double-tap to grab all of that type on screen. With a mouse, Shift+click adds a unit to the selection or takes it out. Tap the ground to attack-move, tap an enemy to attack. <b>Move only</b> retreats without stopping to fight. <b>💤 Idle</b> grabs units with no orders.</p>
-  <h3>Squads</h3><p>Hold a squad chip (<b>1</b>, <b>2</b>, <b>3</b>) to save the selected units into it. Tap it to select them again, double-tap to fly the camera there. It flashes red when a member is hit. Keys: 1–3 select, Ctrl+1–3 (or Shift+1–3) save.</p>
   <h3>Infantry</h3><p>You start every battle with a <b>Trooper Squad</b> by your HQ. The <b>Assembly Bay</b> trains more: <b>Troopers</b> (cheap rifles that hit air too), <b>Rocket Squads</b> (kill Mastodons and Hornets) and, with a Tech Lab, <b>Sniper Teams</b> (delete other infantry, and stay hidden in woods unless they fire or you come within ${INF.concealRadius} tiles). A squad is one unit of several robots: they fall as it takes damage, and it shoots weaker with each one lost. Squads walk through woods and rough ground at full speed, take half damage in woods and capture Uplinks twice as fast, but Mastodons crush them.</p>
   <h3>Condor</h3><p>The Airpad's dropship carries two squads over water, rock and anything else. Select squads and tap the Condor (or select the Condor and tap a squad) to load them; then <b>long-press</b> the map to fly there and drop them, or tap <b>⇣ Unload</b> (key U) to drop them where it is. Shot down over land, its squads bail out hurt; over water or rock they go down with it.</p>
   <h3>Gantry and Goliath</h3><p>With a Fab Plant, an Airpad, a Tech Lab and an Assembly Bay standing you can build the <b>Gantry</b> (one per side, and the enemy always sees it). It builds the <b>Goliath</b>: a giant walking mech and a base on legs. Each one costs ${Math.round(GOLIATH.costStep * 100)}% more for every Goliath you already have. Select it and tap <b>⚓ Anchor</b> (key G) to dig in where it stands (${GOLIATH.anchorTime} s): anchored, harvesters unload at it, it trains squads (Infantry tab, no Assembly Bay needed; tap the map to set their rally point) and you can build within ${GOLIATH.buildRing} tiles of it, even far from base. Those <b>outposts</b> keep working after it leaves, but never extend your build range. <b>⇡ Pack up</b> (G again, ${GOLIATH.packTime} s) before it can walk. It fires mortars, an eye laser, arm cannons and machine guns, and loses them as it is hurt: mortars below ${Math.round(GOLIATH.weapons.mortars.lostBelow * 100)}%, the laser below ${Math.round(GOLIATH.weapons.laser.lostBelow * 100)}%, the cannons below ${Math.round(GOLIATH.weapons.cannons.lostBelow * 100)}% (the machine guns never). Only <b>Menders</b> repair it, and brought back up its weapons reboot. The enemy can always see it.</p>
   <h3>Lift</h3><p>Two empty Condors can carry a walking Goliath: select both and tap it to hook on, then <b>long-press</b> where to set it down (a tap flies it there and hovers; <b>⇣ Set down</b> or U puts it down where it is). In the air it fires only its machine guns, and if either Condor is shot down it falls: hurt over land, lost over water, sea, lava or rock.</p>
   <h3>Counters</h3><p>Stingers beat Flak · Flak beats aircraft · Wasps beat tanks · Raptors hunt aircraft · Mastodons crush ground armies · Mortars and Hornets smash bases and squads · Rocket Squads beat Mastodons · Snipers beat infantry · Rocket Squads, Wasps, Lancers and Hornets bring down Goliaths. Long-press any build button for details.</p>
   <h3>Terrain</h3><p>Roads are fast, mud and woods are slow, woods give cover. Water blocks tanks — Lancers hover across, aircraft fly over everything; the open sea round the Archipelago's islands stops Lancers too. Infantry walk through woods and mud at full speed but can't cross water or rock.</p>
-  <h3>Camera</h3><p>Drag to pan, pinch to zoom, tap the minimap to jump. Pulsing arrows at the screen edge point at fights you can't see (red: you're being hit) — tap one to fly there, or tap ⚡ to cycle through them. Watching AI vs AI, the 🎥 cinematic camera (key C) follows the action by itself; pan or zoom and it hands the camera to you, taking it back a few seconds later.</p>
   <h3>Speed</h3><p>Tap the <b>1×</b> chip by the clock for 1.5× or 2×; hold the clock to fast-forward at 3×.</p>`;
 

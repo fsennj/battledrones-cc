@@ -45,8 +45,8 @@ WS  /<code>/<seat>       join room <code> as seat "host" or "guest"
   from scaling to zero (below).
 - Only the game's own pages may connect: `https://simonw.github.io` and
   `https://*.simonw.workers.dev`. A socket from anywhere else, or with no
-  `Origin` header, is closed with 4003. The list is hard-coded (`ORIGIN` in
-  `server.py`), so a page served from `localhost` can't use the relay. This
+  `Origin` header, is closed with 4003 unless that origin is explicitly added
+  through `RELAY_EXTRA_ORIGINS`. This
   stops other web pages from using it, but not other programs, which can
   send any `Origin` they like.
 
@@ -75,9 +75,17 @@ Close codes. The client should not reconnect after 4002, 4003 or 4010:
 Environment variables:
 
 - `PORT`: the port to listen on (default 8080).
+- `RELAY_BIND`: the address to listen on (default `0.0.0.0`, or `127.0.0.1` behind a local proxy).
+- `RELAY_EXTRA_ORIGINS`: comma-separated exact browser origins for a fork,
+  such as `https://battledrones.example.com`. Include the scheme and any
+  non-default port, without a trailing slash.
 - `LONELY_SECONDS`: how long a seat waits alone (default 600).
 - `MAX_AGE_SECONDS`: the longest a socket stays open (default 7200).
 - `MAX_ROOMS`: the most rooms open at once (default 2000).
+
+Fork builds can set `VITE_BATTLEDRONES_RELAY_URL` when running `npm run build`
+at the repo root. Use the TLS WebSocket URL of the fork's relay for an HTTPS
+game. The same endpoint serves online duels and four-player battles.
 
 ## Run it locally
 

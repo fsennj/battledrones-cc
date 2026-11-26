@@ -3456,6 +3456,11 @@ button {
   from { transform: translateY(40px); opacity: 0; }
 }
 .sheet h2 { font-size: 22px; letter-spacing: 1px; }
+.help-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 .sheet h3 { font-size: 15px; color: var(--gold); margin: 14px 0 6px; }
 .sheet h3 small { color: var(--dim); font-weight: 600; font-size: 12px; margin-left: 4px; }
 .sh-sub { color: #c3cde0; font-size: 14px; margin: 2px 0 10px; }
@@ -5187,16 +5192,13 @@ button {
   font: 12px/1.35 ui-monospace, monospace;
 }
 .replaysheet .replay-file {
-  display: block;
+  width: 100%;
   margin: 8px 0 0;
   text-align: center;
   cursor: pointer;
 }
 .replaysheet .replay-error {
   color: #ff9c8c;
-}
-.replaysheet code {
-  font-size: 12px;
 }
 
 /* ------------------------------------------------------- random maps --- */
