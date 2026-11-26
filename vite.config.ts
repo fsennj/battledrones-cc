@@ -92,7 +92,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       // precache the shell, icons and menu art; painted map terrain
       // (a few MB per map) is cached on first play instead.
-      includeAssets: ["assets/icons/*", "assets/icons/red/*", "assets/icons/green/*", "assets/icons/purple/*", "assets/ui/*", "assets/audio/radio-en-*.mp3", "assets/maps/*/thumb.webp", "assets/textures/rock-*.webp", "icons/*"],
+      includeAssets: ["assets/icons/*", "assets/icons/red/*", "assets/icons/green/*", "assets/icons/purple/*", "assets/ui/covers/*.webp", "assets/audio/radio-en-*.mp3", "assets/maps/*/thumb.webp", "assets/textures/rock-*.webp", "icons/*"],
       workbox: {
         // There are no client-side routes. Exact precached URLs still work
         // offline, but /v1/ etc. must reach their own game and service worker.

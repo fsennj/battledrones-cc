@@ -383,18 +383,18 @@ function showMenu(linkedMap?: string | null): void {
           <button class="rankbadge" id="rankbadge"></button>
           <div class="dailyop" id="dailyop"></div>
         </div>
-        <p class="credits">Cover art generated with OpenAI gpt-image-2.5</p>
       </aside>
     </div>
   `;
   hud.appendChild(menu);
-  // inline, document-relative URLs keep GitHub Pages subpaths working
+  // Document-relative URLs keep the cover artwork working in versioned builds.
   const art = menu.querySelector<HTMLElement>(".keyart")!;
-  const landscape = window.matchMedia("(orientation: landscape)");
-  const setArt = () =>
-    (art.style.backgroundImage = `url(assets/ui/keyart-${landscape.matches ? "landscape" : "portrait"}.webp)`);
-  setArt();
-  landscape.addEventListener("change", setArt);
+  const showCover = (mapId: string) => {
+    const cover = mapId === "dune-sea" ? "dune-sea" : "river-valley";
+    if (menu.dataset.cover === cover) return;
+    menu.dataset.cover = cover;
+    art.style.backgroundImage = `url(assets/ui/covers/${cover}.webp)`;
+  };
 
   // menu music: a gentle take on the selected map's theme, from the first touch
   const biomeOf = (id: string) => mapById(id).biome;
@@ -591,6 +591,7 @@ function showMenu(linkedMap?: string | null): void {
         : `No record yet on ${where} — set one!`;
     }
     const sel = ops.selected();
+    showCover(opsMode ? sel.map : shown);
     const play = menu.querySelector<HTMLButtonElement>("#play")!;
     const locked = opsMode && ops.locked(sel);
     play.textContent = opsMode

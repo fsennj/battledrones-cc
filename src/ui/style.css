@@ -1146,6 +1146,9 @@ button {
 
 /* --------------------------------------------------------------- menu --- */
 .menu {
+  --cover-edge: 0.08;
+  --cover-mid: 0.22;
+  --cover-base: 0.67;
   position: absolute;
   inset: 0;
   pointer-events: auto;
@@ -1154,6 +1157,11 @@ button {
   touch-action: pan-y;
   background: #070a10;
   z-index: 40;
+}
+.menu[data-cover="dune-sea"] {
+  --cover-edge: 0.18;
+  --cover-mid: 0.38;
+  --cover-base: 0.83;
 }
 .keyart {
   position: fixed;
@@ -1167,8 +1175,8 @@ button {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(4, 6, 10, 0.18) 4%, rgba(4, 6, 10, 0.38) 44%, rgba(4, 6, 10, 0.91) 100%),
-    linear-gradient(180deg, transparent 24%, rgba(4, 6, 10, 0.85));
+  background: linear-gradient(90deg, rgba(4, 6, 10, var(--cover-edge)) 4%, rgba(4, 6, 10, var(--cover-mid)) 44%, rgba(4, 6, 10, 0.86) 100%),
+    linear-gradient(180deg, transparent 24%, rgba(4, 6, 10, var(--cover-base)));
 }
 .menu-shell {
   position: relative;
@@ -1432,16 +1440,10 @@ button {
   padding: 4px 14px 12px;
   margin: 0;
 }
-.credits {
-  padding-inline: 3px;
-  color: var(--dim);
-  font-size: 12px;
-}
-
 @media (orientation: portrait), (max-width: 640px) {
-  .keyart { background-position: center top; }
+  .keyart { background-position: 10% center; }
   .keyart::after {
-    background: linear-gradient(180deg, rgba(4, 6, 10, 0.22) 0%, rgba(4, 6, 10, 0.52) 34%, rgba(4, 6, 10, 0.95) 90%);
+    background: linear-gradient(180deg, rgba(4, 6, 10, var(--cover-edge)) 0%, rgba(4, 6, 10, var(--cover-mid)) 34%, rgba(4, 6, 10, 0.95) 90%);
   }
   .menu-shell {
     max-width: 540px;
