@@ -147,7 +147,8 @@ export class Stage {
     this.ratio = dpr;
     r.setPixelRatio(dpr);
     r.outputColorSpace = THREE.SRGBColorSpace;
-    r.toneMapping = THREE.NoToneMapping;
+    // Keep detail in lit snow, sand and metal highlights before the fog and HUD are composited.
+    r.toneMapping = THREE.NeutralToneMapping;
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFShadowMap;
     r.domElement.className = "view3d";

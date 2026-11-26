@@ -11,6 +11,7 @@ import { Ease } from "../three/tween";
 import type { Fx } from "./fx";
 import { CARRY_CLEAR, GantryView, GoliathView, type GoliathHost } from "./goliath";
 import type { GroundGfx } from "../three/ground-gfx";
+import type { Box } from "../framing";
 import { FlashClock, JUICE } from "../juice";
 
 interface UnitView {
@@ -300,6 +301,20 @@ export class EntityRenderer {
       const o = this.views.get(id);
       return o?.kind === "unit" && o.goliath && o.visible ? o.goliath.shellFrom() : null;
     };
+  }
+
+  /** Shade the ground under visible structures and vehicles using the existing ground-mark batch. */
+  contactShadows(g: GroundGfx, bounds: Box): void {
+    for (const v of this.views.values()) {
+      // Remembered buildings keep their last silhouette, including its contact shadow.
+      if (!v.visible || (v.kind === "unit" && (v.air || v.squad))) continue;
+      const structure = v.kind === "building";
+      const r = structure ? v.size * 0.82 : Math.max(0.5, (v.m.def.hull.boundingSphere?.radius ?? 0) * v.scale * 1.25);
+      const x = (structure ? v.cx : v.gx) + r * 0.16;
+      const y = (structure ? v.cy : v.gy) + r * 0.12;
+      if (x + r < bounds.x0 || x - r > bounds.x1 || y + r < bounds.y0 || y - r > bounds.y1) continue;
+      g.fillStyle(0x10141a, structure ? 0.57 : 0.44).softEllipse(x, y, r * 2, r * 1.9);
+    }
   }
 
   /** Decide which enemy units are drawn (see the constructor's `unitShown`); null restores the tile check. */

@@ -38,9 +38,11 @@ const loaded = new Map<UnitKind | BuildingKind, GlbParts>();
 export const glbUnit = (kind: UnitKind): GlbParts | undefined => loaded.get(kind);
 export const glbBuilding = (kind: BuildingKind): GlbParts | undefined => loaded.get(kind);
 
-/** A GLB mesh as a game geometry: flat-shaded, vertex colours (rgb) and a glow weight. */
+/** Keep authored normals and add the game's vertex colours and glow weights. */
 function toGame(src: THREE.BufferGeometry): THREE.BufferGeometry {
-  const g = src.index ? src.toNonIndexed() : src.clone();
+  // Building exports without normals use the original flat face shading.
+  // Expanding those indices keeps the edges between faces sharp.
+  const g = src.index && !src.hasAttribute("normal") ? src.toNonIndexed() : src.clone();
   const col = g.attributes.color as THREE.BufferAttribute | undefined;
   const n = g.attributes.position!.count;
   const cols = new Float32Array(n * 3);
@@ -53,10 +55,10 @@ function toGame(src: THREE.BufferGeometry): THREE.BufferGeometry {
     // amber lights (HAZ yellow has g/r ~0.6, so it stays plain colour)
     if (r > 0.5 && gr < 0.45 * r && b < 0.15 * r) glow[i] = 1;
   }
-  for (const name of Object.keys(g.attributes)) if (name !== "position") g.deleteAttribute(name);
+  for (const name of Object.keys(g.attributes)) if (name !== "position" && name !== "normal") g.deleteAttribute(name);
   g.setAttribute("color", new THREE.BufferAttribute(cols, 3));
   g.setAttribute("glow", new THREE.BufferAttribute(glow, 1));
-  g.computeVertexNormals();
+  if (!g.hasAttribute("normal")) g.computeVertexNormals();
   g.computeBoundingBox();
   g.computeBoundingSphere();
   return g;

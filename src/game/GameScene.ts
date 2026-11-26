@@ -922,6 +922,7 @@ export class GameScene {
     v.particles.update(delta * slow);
     this.juice.update(fxDt);
     this.place.update(delta);
+    if (render && !this.stage.renderer.shadowMap.enabled) this.entities.contactShadows(v.ground, this.viewBox);
     this.drawWorldMarks();
     if (render) {
       v.ground.flush();

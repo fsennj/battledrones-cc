@@ -103,6 +103,7 @@ export class GroundGfx {
       depthWrite: false,
       depthTest: !o.onTop,
       side: THREE.DoubleSide,
+      forceSinglePass: true,
       toneMapped: false,
       polygonOffset: true,
       polygonOffsetFactor: -4,
@@ -474,21 +475,23 @@ export class GroundGfx {
   // -------------------------------------------------------------- fills ---
 
   /** Filled ellipse: a fan, with inner rings on big ones so it drapes over bumps. */
-  private fan(x: number, y: number, rx: number, ry: number, h?: number): this {
+  private fan(x: number, y: number, rx: number, ry: number, h?: number, soft = false): this {
     if (rx <= 0 || ry <= 0 || this.fc[3] === 0) return this;
-    const segs = this.segsFor(rx, ry, Math.PI * 2);
-    const rings = h === undefined ? Math.max(1, Math.min(4, Math.ceil(Math.max(rx, ry) / 1.2))) : 1;
+    const segments = this.segsFor(rx, ry, Math.PI * 2);
+    const segs = soft ? Math.min(16, segments) : segments;
+    const rings = soft ? 3 : h === undefined ? Math.max(1, Math.min(4, Math.ceil(Math.max(rx, ry) / 1.2))) : 1;
     const k = this.fc;
     const centre = this.vert(x, this.y(x, y, h), y, k);
     let prev = -1;
     for (let r = 1; r <= rings; r++) {
       const f = r / rings;
+      const alpha = soft ? Math.round(k[3]! * (1 - f * f) ** 2) : -1;
       const row = this.nv;
       for (let i = 0; i < segs; i++) {
         const a = (i / segs) * Math.PI * 2;
         const px = x + Math.cos(a) * rx * f;
         const py = y + Math.sin(a) * ry * f;
-        this.vert(px, this.y(px, py, h), py, k);
+        this.vert(px, this.y(px, py, h), py, k, 0, alpha);
       }
       for (let i = 0; i < segs; i++) {
         const j = (i + 1) % segs;
@@ -509,6 +512,11 @@ export class GroundGfx {
 
   fillEllipse(x: number, y: number, w: number, hgt: number, h?: number): this {
     return this.fan(x, y, w / 2, hgt / 2, h);
+  }
+
+  /** A feathered ellipse draped on the surface, for ground contact when shadow maps are off. */
+  softEllipse(x: number, y: number, w: number, hgt: number): this {
+    return this.fan(x, y, w / 2, hgt / 2, undefined, true);
   }
 
   /** Filled rectangle, split into a grid of ~2/3-tile cells so it hugs the terrain. */

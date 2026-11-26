@@ -196,7 +196,6 @@ const ELITE_SHEEN = 6;
 function modelMaterial(v: VariantSpec, elite: boolean, canopy = false, clear = false): THREE.MeshStandardMaterial {
   const m = new THREE.MeshStandardMaterial({
     vertexColors: true,
-    flatShading: true,
     roughness: v.roughness ?? 0.78,
     metalness: v.metalness ?? 0.14,
     side: THREE.DoubleSide,

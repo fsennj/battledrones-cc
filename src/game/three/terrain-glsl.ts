@@ -193,6 +193,10 @@ export function patchGround(s: Shader, u: GroundUniforms, rock: RockUniforms | n
     .replace(
       "#include <map_fragment>",
       /* glsl */ `float od = bdOutside( vFowW.xz );
+      // At overview zoom or reduced resolution, a pixel spans more ground. Keep the painted
+      // mipmaps in charge there so the close-up emboss and sharpen don't turn to noise.
+      float groundPx = max( length( dFdx( vFowW.xz ) ), length( dFdy( vFowW.xz ) ) );
+      float closeDetail = 1.0 - smoothstep( 0.035, 0.12, groundPx );
       #ifdef USE_MAP
       {
         // past the edge the mirrored paint blurs (a coarser mip), so it never reads as a copy of the map
@@ -201,7 +205,7 @@ export function patchGround(s: Shader, u: GroundUniforms, rock: RockUniforms | n
         // unsharp mask: the paint minus a softer mip of itself, so close in it reads crisp, not smeared
         // (high rock is softened a little instead: its paint is busy enough under the crags)
         vec3 soft = texture2D( map, vMapUv, blur + 1.5 ).rgb;
-        float sharp = mix( uDetail.z, -0.5, smoothstep( 0.35, 0.8, vFowW.y ) ) * ( 1.0 - smoothstep( 0.0, 1.0, od ) );
+        float sharp = mix( uDetail.z * closeDetail, -0.5, smoothstep( 0.35, 0.8, vFowW.y ) ) * ( 1.0 - smoothstep( 0.0, 1.0, od ) );
         diffuseColor.rgb = max( diffuseColor.rgb + ( diffuseColor.rgb - soft ) * sharp, 0.0 );
       }
       #endif`
@@ -224,7 +228,7 @@ export function patchGround(s: Shader, u: GroundUniforms, rock: RockUniforms | n
         vec2 gp = mat2( 0.66, 0.29, -0.29, 0.66 ) * wp;
         float g0 = texture2D( uTNoise, gp ).r;
         float g1 = texture2D( uTNoise, gp + vec2( 0.0045, 0.0035 ) ).r;
-        diffuseColor.rgb *= 1.0 + ( g0 - 0.5 ) * uDetail.x + ( g1 - g0 ) * uDetail.y;
+        diffuseColor.rgb *= 1.0 + ( g0 - 0.5 ) * uDetail.x + ( g1 - g0 ) * uDetail.y * closeDetail;
         diffuseColor.rgb *= 1.0 - vContactShade;
         diffuseColor.rgb = bdDim( diffuseColor.rgb, od );
       }`
