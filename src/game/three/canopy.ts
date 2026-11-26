@@ -9,6 +9,9 @@ export interface TreeSpot {
 
 /** A robot's middle above ground, in tiles. */
 const ROBOT_H = 0.2;
+/** Size to use when a caller supplies a canopy mesh before attaching vertices. */
+const DEFAULT_CROWN_H = 0.55;
+const DEFAULT_CROWN_R = 0.32;
 /** Thinned all the way inside this (plus the canopy's reach), not at all past FADE_R further out. */
 const CLEAR_R = 0.5;
 const FADE_R = 0.4;
@@ -73,9 +76,10 @@ export class Canopy {
       // The palm fronds, pine skirts and scrub crowns cover different areas on screen.
       // Measure the widest part above the stump once per variant.
       const p = mesh.geometry.getAttribute("position");
-      let radius = 0;
-      let height = ROBOT_H;
-      for (let j = 0; j < p.count; j++) {
+      const vertices = p?.count ?? 0;
+      let radius = vertices ? 0 : DEFAULT_CROWN_R;
+      let height = DEFAULT_CROWN_H;
+      for (let j = 0; j < vertices; j++) {
         const y = p.getY(j);
         if (y < 0.2) continue;
         const r = Math.hypot(p.getX(j), p.getZ(j));

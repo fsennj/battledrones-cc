@@ -300,13 +300,14 @@ export function patchLiquid(s: Shader, u: LiquidUniforms): void {
         float n = ( n1 + n2 ) * 0.5;
         float footprint = max( length( dFdx( vXZ ) ), length( dFdy( vXZ ) ) );
         float close = 1.0 - smoothstep( 0.07, 0.32, footprint );
-        float swell = dot( vXZ, vec2( 1.62, 0.7 ) ) - uWT * 0.88 + n1 * 5.0;
-        float crossSwell = dot( vXZ, vec2( -0.91, 2.07 ) ) + uWT * 0.65 + n2 * 4.2;
+        float swell = dot( vXZ, vec2( 1.62, 0.7 ) ) - uWT * 0.88 + n1 * 7.0 + n2 * 2.3;
+        float crossSwell = dot( vXZ, vec2( -0.91, 2.07 ) ) + uWT * 0.65 + n2 * 5.6 - n1 * 1.4;
         float ripple = dot( vXZ, vec2( 5.8, -4.3 ) ) - uWT * 1.45 + n2 * 7.0;
         waterTilt = vec2( 0.12, 0.05 ) * cos( swell ) + vec2( -0.048, 0.105 ) * cos( crossSwell )
           + vec2( 0.064, -0.056 ) * cos( ripple ) * close;
 
         float ocean = smoothstep( 0.45, 1.16, vDepth );
+        waterTilt *= mix( 1.0, 0.56, ocean );
         wc = mix( mix( uShallow, uDeep, dk ), uAbyss, ocean );
         wc *= 0.86 + 0.23 * n + 0.055 * sin( crossSwell ) + 0.05 * sin( swell );
         alpha = mix( 0.15, 0.94, dk );
