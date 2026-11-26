@@ -18,6 +18,8 @@ Im Projektordner mit Node.js `node tools/xr-music-review.mjs` ausführen und [di
 
 ### Nachtkonvoi im XR-Tisch testen
 
+Öffne die [geschützte Nachtkonvoi-Testszene in Chrome](https://battledrones-nachtkonvoi.innotec-ster-5927.chatgpt.site/) und melde dich mit dem freigeschalteten ChatGPT-Konto an. Mit **Nachtkonvoi · Funkprobe im Flug** startest du den Flug zum nächsten Messpunkt. Für den Online-Test genügt Chrome.
+
 Die [27-Sekunden-Hörprobe](../ton-1-nachtkonvoi.wav) verbindet Musik, Briefing-Stellvertreter, Auswahl, Zielbestätigung, Wasp-Motor, Funk und Abschlussmeldung. Der [XR-Patch](../nachtkonvoi-xr.patch) enthält die Live-Mischung, den Schutz vor einem doppelten Funkstart am Wegpunkt und den leiseren Schwebeflugpegel bis zum Ende der Meldung. Der [Audio-Smoke-Test](../../../../tools/xr-audio-smoke.mjs) verwendet für den Wasp-Klick jetzt die tatsächliche Kamera und Canvas-Fläche.
 
 Der Stahltrieb-Branch bringt eine startfertige Zillertal-Fassung des XR-Tischs mit. Im ausgecheckten Branch genügt Node.js. Starte den lokalen Server im Projektordner und öffne die [Zillertal-Testszene in Chrome](http://127.0.0.1:5194/xr.html?map=zillertal&ton=nachtkonvoi). Dort startet **Nachtkonvoi · Funkprobe im Flug** den Flug zum nächsten Messpunkt. Der XR-Patch dient der späteren Übernahme in den vollständigen Projektstand.
@@ -52,6 +54,8 @@ This is an early working draft. There is still a lot of ground to make up, espec
 Run `node tools/xr-music-review.mjs` with Node.js from the checkout and [open the review](http://127.0.0.1:5193/). Switch between **Serious** and **Tyrolean fun**. Use **Highest rated** to sort by stars and **For the game** to shortlist a track. **Export selection** downloads the selected tracks, ratings and asset paths as `stahltrieb-auswahl.json`. The server saves ratings locally in `.xr-music-review/ratings.json`. The shortlist is for the subsequent in-game mix and approval.
 
 ### Test Nachtkonvoi on the XR tabletop
+
+Open the [protected Nachtkonvoi test scene in Chrome](https://battledrones-nachtkonvoi.innotec-ster-5927.chatgpt.site/) and sign in with an authorized ChatGPT account. Select **Nachtkonvoi · In-flight radio test** to fly to the next waypoint. Chrome is all you need to run the online test.
 
 The [27-second preview](../ton-1-nachtkonvoi.wav) combines the score, a briefing stand-in, selection and destination cues, the Wasp engine, radio and the completion report. The [XR patch](../nachtkonvoi-xr.patch) contains the live mix, prevents waypoint arrival from restarting a radio line, and keeps the motor at quiet hover power until the line ends. The [audio smoke test](../../../../tools/xr-audio-smoke.mjs) now uses the actual camera and canvas to click the Wasp.
 
